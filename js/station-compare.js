@@ -2,8 +2,8 @@
 
 import { fetchStationComparison, fetchStationList, fetchEquipmentAnalytics, fetchStationDurationBuckets } from './api.js';
 import {
-  CHART_DEFAULTS, CHART_COLORS, RESPONSE_CODE_LABELS, RESPONSE_CODE_COLORS,
-  escapeHtml, deltaBadge, formatNum, removeSkeleton, MONTH_LABELS,
+  CHART_DEFAULTS, CHART_COLORS, DOUGHNUT_DEFAULTS, RESPONSE_CODE_LABELS, RESPONSE_CODE_COLORS,
+  escapeHtml, deltaBadge, formatNum, removeSkeleton, MONTH_LABELS, renderMarkdown,
 } from './chart-utils.js';
 import {
   streamAnalysis, buildStationPrompt, getStationSystemPrompt,
@@ -238,13 +238,7 @@ function renderTypeMix(data) {
         borderWidth: 2,
       }],
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'right', labels: { color: '#7a8a9a', font: { size: 11 }, padding: 12 } },
-      },
-    },
+    options: DOUGHNUT_DEFAULTS,
   });
 }
 
@@ -305,13 +299,7 @@ function renderResponseCodes(data) {
         borderWidth: 2,
       }],
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'right', labels: { color: '#7a8a9a', font: { size: 11 }, padding: 12 } },
-      },
-    },
+    options: DOUGHNUT_DEFAULTS,
   });
 }
 
@@ -654,21 +642,3 @@ function runStationAnalysis(modeId, userQuery, responseArea) {
   );
 }
 
-// Simple markdown to HTML renderer (same as app.js)
-function renderMarkdown(text) {
-  return text
-    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
-    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`)
-    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br>')
-    .replace(/^/, '<p>')
-    .replace(/$/, '</p>')
-    .replace(/<p>\s*<\/p>/g, '')
-    .replace(/<p>\s*<(h[34]|ul|ol)/g, '<$1')
-    .replace(/<\/(h[34]|ul|ol)>\s*<\/p>/g, '</$1>');
-}

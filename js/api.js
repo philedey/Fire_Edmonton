@@ -63,7 +63,6 @@ export async function fetchDashboardData(filterState) {
   const params = filterToRpcParams(filterState);
   const data = await supabaseRpc('dashboard_data', params);
 
-  console.log('Dashboard data received from Supabase RPC');
   return {
     stats: buildStatsFromRpc(data),
     extraCharts: {
@@ -162,7 +161,6 @@ export async function fetchMapPoints(onProgress) {
     offset += PAGE_SIZE;
   }
 
-  console.log(`Map points fetched from Supabase: ${allData.length} fire records`);
   return buildGeoJSON(allData);
 }
 

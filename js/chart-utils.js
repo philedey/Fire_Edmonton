@@ -55,6 +55,14 @@ export const CHART_DEFAULTS = {
   },
 };
 
+export const DOUGHNUT_DEFAULTS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { position: 'right', labels: { color: '#7a8a9a', font: { size: 11 }, padding: 12 } },
+  },
+};
+
 export function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
@@ -106,4 +114,22 @@ export function renderSparkline(yearlyCounts, years, width = 80, height = 20) {
     `<polyline points="${points}" fill="none" stroke="${strokeColor}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>` +
     `<circle cx="${lastPoint[0]}" cy="${lastPoint[1]}" r="1.5" fill="${strokeColor}"/>` +
     `</svg>`;
+}
+
+export function renderMarkdown(text) {
+  return text
+    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`)
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+    .replace(/^/, '<p>')
+    .replace(/$/, '</p>')
+    .replace(/<p>\s*<\/p>/g, '')
+    .replace(/<p>\s*<(h[34]|ul|ol)/g, '<$1')
+    .replace(/<\/(h[34]|ul|ol)>\s*<\/p>/g, '</$1>');
 }

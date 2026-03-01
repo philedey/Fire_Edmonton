@@ -1,6 +1,4 @@
-import { CHART_DEFAULTS, escapeHtml } from './chart-utils.js';
-
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+import { CHART_DEFAULTS, DOUGHNUT_DEFAULTS, MONTH_LABELS, escapeHtml } from './chart-utils.js';
 
 const DOUGHNUT_PALETTE = [
   '#ff4444', '#ff6b35', '#ff9933', '#ffcc00',
@@ -30,7 +28,7 @@ export function initCharts() {
 
   monthlyChart = new Chart(document.getElementById('chart-monthly'), {
     type: 'line',
-    data: { labels: MONTH_NAMES, datasets: [] },
+    data: { labels: MONTH_LABELS, datasets: [] },
     options: {
       ...CHART_DEFAULTS,
       plugins: {
@@ -47,16 +45,7 @@ export function initCharts() {
   doughnutChart = new Chart(document.getElementById('chart-doughnut'), {
     type: 'doughnut',
     data: { labels: [], datasets: [] },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'right',
-          labels: { color: '#7a8a9a', font: { size: 11 }, padding: 12 },
-        },
-      },
-    },
+    options: DOUGHNUT_DEFAULTS,
   });
 }
 

@@ -1,4 +1,4 @@
-import { CHART_DEFAULTS } from './chart-utils.js';
+import { CHART_DEFAULTS, MONTH_LABELS } from './chart-utils.js';
 // Re-export renderSparkline from the shared module for app.js
 export { renderSparkline } from './chart-utils.js';
 
@@ -16,8 +16,6 @@ const DAY_ORDER = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'
 const DAY_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 const TREND_COLORS = ['#ff4444','#ff9933','#ffcc00','#4ecdc4','#36a89e'];
-
-const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // --- Hour color gradient: darker for night hours, brighter for day hours ---
 
@@ -99,7 +97,7 @@ export function initExtraCharts() {
   if (trendCanvas) {
     trendChart = new Chart(trendCanvas, {
       type: 'line',
-      data: { labels: MONTH_NAMES, datasets: [] },
+      data: { labels: MONTH_LABELS, datasets: [] },
       options: {
         ...CHART_DEFAULTS,
         plugins: {

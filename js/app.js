@@ -6,6 +6,7 @@ import { getCachedMapData, setCachedMapData, isCacheStale } from './cache.js';
 import { initExtraCharts, updateExtraChartsFromData, renderSparkline } from './charts-extra.js';
 import { initStationCharts, updateStationCharts } from './charts-station.js';
 import { ANALYSIS_MODES, streamAnalysis, buildPrompt, getSystemPrompt } from './ai.js';
+import { escapeHtml, renderMarkdown } from './chart-utils.js';
 import {
   initMapLayers, toggleChoropleth, updateChoroplethCounts,
   toggleStations, toggle3D, update3DCounts,
@@ -487,43 +488,12 @@ function runAnalysis(modeId, userQuery, responseArea) {
       if (fullText) {
         contentDiv.innerHTML = renderMarkdown(fullText);
       } else {
-        responseArea.innerHTML = `<div class="ai-error">${escapeForHtml(String(err))}</div>`;
+        responseArea.innerHTML = `<div class="ai-error">${escapeHtml(String(err))}</div>`;
       }
     }
   );
 }
 
-function escapeForHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-// Simple markdown to HTML renderer
-function renderMarkdown(text) {
-  return text
-    // Headers
-    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
-    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
-    // Bold
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    // Italic
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Bullet lists
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`)
-    // Numbered lists
-    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-    // Paragraphs (double newline)
-    .replace(/\n\n/g, '</p><p>')
-    // Single newlines within paragraphs
-    .replace(/\n/g, '<br>')
-    // Wrap in paragraph
-    .replace(/^/, '<p>')
-    .replace(/$/, '</p>')
-    // Clean up empty paragraphs
-    .replace(/<p>\s*<\/p>/g, '')
-    .replace(/<p>\s*<(h[34]|ul|ol)/g, '<$1')
-    .replace(/<\/(h[34]|ul|ol)>\s*<\/p>/g, '</$1>');
-}
 
 // --- Utilities ---
 

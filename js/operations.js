@@ -2,7 +2,7 @@
 
 import { fetchEquipmentAnalytics, fetchOperationalKPIs } from './api.js';
 import {
-  CHART_DEFAULTS, CHART_COLORS, RESPONSE_CODE_LABELS, RESPONSE_CODE_COLORS,
+  CHART_DEFAULTS, CHART_COLORS, DOUGHNUT_DEFAULTS, RESPONSE_CODE_LABELS, RESPONSE_CODE_COLORS,
   escapeHtml, formatNum, removeSkeleton, MONTH_LABELS,
 } from './chart-utils.js';
 
@@ -45,9 +45,6 @@ async function loadOperationsData(year) {
       fetchOperationalKPIs(year),
       fetchEquipmentAnalytics(year),
     ]);
-
-    console.log('Operations data keys:', Object.keys(opsData));
-    console.log('Equipment data keys:', Object.keys(equipData));
 
     renderOpsKPIs(opsData, equipData);
     renderEquipmentTypeChart(equipData);
@@ -385,13 +382,7 @@ function renderResponseCodeChart(data) {
         borderWidth: 2,
       }],
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'right', labels: { color: '#7a8a9a', font: { size: 11 }, padding: 12 } },
-      },
-    },
+    options: DOUGHNUT_DEFAULTS,
   });
 }
 

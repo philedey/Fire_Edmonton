@@ -70,6 +70,10 @@
         <svg class="tab-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
         Scorecard
       </button>
+      <button class="tab-btn" data-tab="rankings">
+        <svg class="tab-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z"/></svg>
+        Rankings
+      </button>
     </div>
   </nav>
 
@@ -734,6 +738,55 @@
       <h3>Saved Comparisons</h3>
       <div id="sc-saved-list" class="sc-saved-list">
         <p class="sc-saved-empty">No saved comparisons yet. Compare two stations and click Save.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TAB: RANKINGS -->
+  <!-- ============================================================ -->
+  <div class="tab-panel hidden" data-tab="rankings">
+    <div class="tab-header">
+      <div class="tab-header-left">
+        <h2 class="section-title">Station Rankings</h2>
+        <p class="section-sub">Competitive leaderboard — median event duration is the key metric</p>
+      </div>
+    </div>
+
+    <!-- Period Toggle + Metric Pills + Playback Controls -->
+    <div class="rank-controls glass">
+      <div class="rank-controls-left">
+        <div class="rank-period-toggle">
+          <button class="period-btn active" data-period="ytd">YTD</button>
+          <button class="period-btn" data-period="mtd">MTD</button>
+          <button class="period-btn" data-period="last7">Last 7 Days</button>
+        </div>
+        <span class="rank-date-range" id="rank-date-range"></span>
+      </div>
+      <div id="rank-metrics" class="rank-metrics"></div>
+      <div class="rank-playback">
+        <button id="rank-play" class="btn btn-accent rank-play-btn" title="Play month-by-month">&#9654;</button>
+        <button class="rank-speed-btn active" data-speed="1">1x</button>
+        <button class="rank-speed-btn" data-speed="2">2x</button>
+        <button class="rank-speed-btn" data-speed="4">4x</button>
+        <span id="rank-month-label" class="rank-month-label">YTD</span>
+      </div>
+    </div>
+
+    <!-- Podium (Top 3) -->
+    <div class="chart-card glass skeleton" id="card-rank-podium">
+      <h3>Top 3 Stations</h3>
+      <div id="rank-podium" class="podium-grid"></div>
+    </div>
+
+    <!-- Racing Bar Chart + Leaderboard Grid -->
+    <div class="rank-grid">
+      <div class="chart-card glass skeleton" id="card-rank-chart">
+        <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-racing-bars"></canvas></div>
+      </div>
+      <div class="chart-card glass skeleton" id="card-rank-leaderboard">
+        <h3>Full Leaderboard</h3>
+        <div id="rank-leaderboard" class="rank-leaderboard"></div>
       </div>
     </div>
   </div>

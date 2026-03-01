@@ -18,6 +18,7 @@ import { initOperations } from './operations.js';
 import { initTrends } from './trends.js';
 import { initInsights } from './insights.js';
 import { initScorecard } from './scorecard.js';
+import { initRankings } from './rankings.js';
 
 let mapGeojson = null;
 let currentYears = [];
@@ -119,6 +120,7 @@ async function main() {
       trends: () => initTrends(baselineStats, baselineExtraCharts),
       insights: () => initInsights(baselineStats, baselineExtraCharts, currentStationData, mapGeojson),
       scorecard: () => initScorecard(),
+      rankings: () => initRankings(),
     });
 
     // === PHASE 2: Map point data (try cache first) ===

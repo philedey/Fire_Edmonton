@@ -218,6 +218,12 @@ export async function fetchStationComparison(station) {
   return data;
 }
 
+// --- Station rankings (live query, YTD/MTD/Last 7 Days) ---
+
+export async function fetchStationRankings() {
+  return await supabaseRpc('station_rankings', {});
+}
+
 // --- Equipment analytics ---
 
 export async function fetchEquipmentAnalytics(year, station) {

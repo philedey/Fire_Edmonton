@@ -66,6 +66,10 @@
         <svg class="tab-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
         Insights
       </button>
+      <button class="tab-btn" data-tab="scorecard">
+        <svg class="tab-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
+        Scorecard
+      </button>
     </div>
   </nav>
 
@@ -669,6 +673,57 @@
           <h3>Risk Assessment Detail</h3>
           <div class="table-wrapper table-wrapper-tall" id="ins-risk-table"></div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TAB: SCORECARD -->
+  <!-- ============================================================ -->
+  <div class="tab-panel hidden" data-tab="scorecard">
+    <div class="tab-header">
+      <div class="tab-header-left">
+        <h2 class="section-title">Station Scorecard</h2>
+        <p class="section-sub">Side-by-side station comparison</p>
+      </div>
+    </div>
+
+    <!-- Station Selection -->
+    <div class="sc-controls glass">
+      <div class="sc-selectors">
+        <div class="sc-selector">
+          <label for="sc-station-a">Station A</label>
+          <select id="sc-station-a"><option>Loading...</option></select>
+        </div>
+        <span class="sc-vs-icon">VS</span>
+        <div class="sc-selector">
+          <label for="sc-station-b">Station B</label>
+          <select id="sc-station-b"><option>Loading...</option></select>
+        </div>
+        <button id="sc-save-btn" class="btn btn-accent sc-save-btn">Save Comparison</button>
+      </div>
+    </div>
+
+    <!-- Score Header -->
+    <div id="sc-header" class="sc-header-container"></div>
+
+    <!-- Scorecard Grid: Table + Radar -->
+    <div class="sc-grid">
+      <div class="chart-card glass skeleton" id="card-sc-table">
+        <h3>Metric-by-Metric Comparison</h3>
+        <div id="sc-table"></div>
+      </div>
+      <div class="chart-card glass skeleton" id="card-sc-radar">
+        <h3>Performance Profile</h3>
+        <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-sc-radar"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Saved Comparisons -->
+    <div class="chart-card glass" id="card-sc-saved">
+      <h3>Saved Comparisons</h3>
+      <div id="sc-saved-list" class="sc-saved-list">
+        <p class="sc-saved-empty">No saved comparisons yet. Compare two stations and click Save.</p>
       </div>
     </div>
   </div>

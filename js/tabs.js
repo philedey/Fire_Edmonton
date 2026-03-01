@@ -4,7 +4,7 @@ let activeTab = 'overview';
 let tabCallbacks = {};
 let tabLoaded = {};
 
-const TABS = ['overview', 'stations', 'operations', 'trends', 'insights'];
+const TABS = ['overview', 'stations', 'operations', 'trends', 'insights', 'scorecard'];
 
 export function initTabs(callbacks) {
   tabCallbacks = callbacks || {};

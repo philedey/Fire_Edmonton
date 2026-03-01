@@ -488,13 +488,22 @@ function renderAllStationsTable(data, selectedStation) {
 
   const sorted = [...stations].sort((a, b) => (parseInt(b.total_ytd) || 0) - (parseInt(a.total_ytd) || 0));
 
+  // Compute median total for workload score
+  const totals = sorted.map(row => parseInt(row.total_ytd) || 0);
+  const sortedTotals = [...totals].sort((a, b) => a - b);
+  const mid = Math.floor(sortedTotals.length / 2);
+  const median = sortedTotals.length % 2 !== 0
+    ? sortedTotals[mid]
+    : (sortedTotals[mid - 1] + sortedTotals[mid]) / 2;
+  const maxTotal = Math.max(...totals, 1);
+
   let html = `
     <table class="ops-table">
       <thead>
         <tr>
           <th>#</th><th>Station</th><th>Total YTD</th>
           <th>Structure</th><th>Outside</th><th>Alarms</th>
-          <th>Avg Dur</th>
+          <th>Avg Dur</th><th>Workload</th>
         </tr>
       </thead>
       <tbody>
@@ -509,6 +518,23 @@ function renderAllStationsTable(data, selectedStation) {
     const alarms = parseInt(row.alarms_ytd) || 0;
     const dur = row.avg_duration != null ? parseFloat(row.avg_duration).toFixed(1) : '--';
 
+    const workloadPct = median > 0 ? (total / median) * 100 : 0;
+    let workloadClass, workloadLabel;
+    if (workloadPct > 150) {
+      workloadClass = 'workload-red';
+      workloadLabel = 'Overloaded';
+    } else if (workloadPct > 125) {
+      workloadClass = 'workload-orange';
+      workloadLabel = 'High';
+    } else if (workloadPct < 75) {
+      workloadClass = 'workload-green';
+      workloadLabel = 'Low';
+    } else {
+      workloadClass = 'workload-neutral';
+      workloadLabel = '';
+    }
+    const barWidth = (total / maxTotal) * 100;
+
     html += `
       <tr class="${highlighted}">
         <td>${i + 1}</td>
@@ -518,6 +544,13 @@ function renderAllStationsTable(data, selectedStation) {
         <td>${formatNum(outside)}</td>
         <td>${formatNum(alarms)}</td>
         <td>${dur}</td>
+        <td class="workload-cell">
+          <div class="workload-bar-track">
+            <div class="workload-bar-fill ${workloadClass}" style="width:${barWidth}%"></div>
+          </div>
+          <span class="workload-pct ${workloadClass}">${workloadPct.toFixed(0)}%</span>
+          ${workloadLabel ? `<span class="workload-label ${workloadClass}">${workloadLabel}</span>` : ''}
+        </td>
       </tr>
     `;
   });

@@ -62,6 +62,10 @@
         <svg class="tab-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z"/></svg>
         Trends
       </button>
+      <button class="tab-btn" data-tab="insights">
+        <svg class="tab-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+        Insights
+      </button>
     </div>
   </nav>
 
@@ -562,6 +566,107 @@
       <div class="chart-card glass skeleton">
         <h3>Growth Rate by Incident Type</h3>
         <div class="table-wrapper" id="growth-rate-table"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TAB: INSIGHTS -->
+  <!-- ============================================================ -->
+  <div class="tab-panel hidden" data-tab="insights">
+    <div class="tab-header">
+      <div class="tab-header-left">
+        <h2 class="section-title">Resource Allocation Insights</h2>
+        <p class="section-sub">Data-driven recommendations for staffing, prevention, and workload balancing</p>
+      </div>
+    </div>
+
+    <!-- Executive KPI Summary -->
+    <div class="kpi-row kpi-row-5" id="insights-kpi-row">
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value" id="ins-kpi-alarm-cost">--</div>
+        <div class="kpi-label">Est. Alarm Response Cost</div>
+        <div class="kpi-sub" id="ins-kpi-alarm-cost-sub">annual alarm burden</div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value" id="ins-kpi-imbalance">--</div>
+        <div class="kpi-label">Workload Imbalance</div>
+        <div class="kpi-sub" id="ins-kpi-imbalance-sub">coefficient of variation</div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value" id="ins-kpi-prevention">--</div>
+        <div class="kpi-label">Top Prevention Target</div>
+        <div class="kpi-sub" id="ins-kpi-prevention-sub">highest risk score</div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value" id="ins-kpi-seasonal">--</div>
+        <div class="kpi-label">Seasonal Demand Range</div>
+        <div class="kpi-sub" id="ins-kpi-seasonal-sub">peak vs trough ratio</div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value" id="ins-kpi-overloaded">--</div>
+        <div class="kpi-label">Overloaded Stations</div>
+        <div class="kpi-sub" id="ins-kpi-overloaded-sub">&gt;150% of median volume</div>
+      </div>
+    </div>
+
+    <!-- Station Workload Imbalance -->
+    <div class="ops-section">
+      <h3 class="ops-section-title">Station Workload Imbalance</h3>
+      <div class="ops-grid-2">
+        <div class="chart-card glass skeleton" id="card-ins-workload">
+          <h3>Station Volume vs Median <span class="chart-subtitle">% of median workload</span></h3>
+          <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-ins-workload"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton" id="card-ins-workload-table">
+          <h3>Workload Assessment</h3>
+          <div class="table-wrapper table-wrapper-tall" id="ins-workload-table"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alarm Burden Hotspots -->
+    <div class="ops-section">
+      <h3 class="ops-section-title">Alarm Burden by Station</h3>
+      <div class="ops-grid-2">
+        <div class="chart-card glass skeleton" id="card-ins-alarm">
+          <h3>Alarm Rate by Station <span class="chart-subtitle">alarms as % of total calls</span></h3>
+          <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-ins-alarm"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton" id="card-ins-alarm-table">
+          <h3>Alarm Burden Detail</h3>
+          <div class="table-wrapper" id="ins-alarm-table"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seasonal Staffing Profile -->
+    <div class="ops-section">
+      <h3 class="ops-section-title">Seasonal Staffing Profile</h3>
+      <div class="ops-grid-2">
+        <div class="chart-card glass skeleton" id="card-ins-monthly">
+          <h3>Monthly Demand Curve <span class="chart-subtitle">vs flat 24/7 staffing baseline</span></h3>
+          <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-ins-monthly"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton" id="card-ins-hourly">
+          <h3>Hourly Demand Profile <span class="chart-subtitle">incident volume by hour of day</span></h3>
+          <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-ins-hourly"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prevention Priority Neighbourhoods -->
+    <div class="ops-section">
+      <h3 class="ops-section-title">Prevention Priority Neighbourhoods</h3>
+      <div class="ops-grid-2">
+        <div class="chart-card glass skeleton" id="card-ins-risk-chart">
+          <h3>Risk Score by Neighbourhood <span class="chart-subtitle">volume + trend + severity</span></h3>
+          <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-ins-risk"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton" id="card-ins-risk-table">
+          <h3>Risk Assessment Detail</h3>
+          <div class="table-wrapper table-wrapper-tall" id="ins-risk-table"></div>
+        </div>
       </div>
     </div>
   </div>

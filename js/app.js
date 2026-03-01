@@ -15,6 +15,7 @@ import { initTabs, navigateToTab } from './tabs.js';
 import { initStationCompare } from './station-compare.js';
 import { initOperations } from './operations.js';
 import { initTrends } from './trends.js';
+import { initInsights } from './insights.js';
 
 let mapGeojson = null;
 let currentYears = [];
@@ -111,6 +112,7 @@ async function main() {
       stations: () => initStationCompare(),
       operations: () => initOperations(currentYears),
       trends: () => initTrends(baselineStats, baselineExtraCharts),
+      insights: () => initInsights(baselineStats, baselineExtraCharts, currentStationData, mapGeojson),
     });
 
     // === PHASE 2: Map point data (try cache first) ===

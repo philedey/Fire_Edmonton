@@ -515,7 +515,7 @@
     <!-- YTD Section -->
     <div class="ops-section">
       <h3 class="ops-section-title">Year-to-Date Pace</h3>
-      <div class="kpi-row kpi-row-4" id="ytd-kpi-row">
+      <div class="kpi-row kpi-row-5" id="ytd-kpi-row">
         <div class="kpi-card glass skeleton">
           <div class="kpi-value" id="ytd-kpi-total">--</div>
           <div class="kpi-label">Total YTD</div>
@@ -535,6 +535,11 @@
           <div class="kpi-value kpi-other" id="ytd-kpi-alarms">--</div>
           <div class="kpi-label">Alarms YTD</div>
           <div class="kpi-sub" id="ytd-kpi-alarms-sub"></div>
+        </div>
+        <div class="kpi-card glass skeleton">
+          <div class="kpi-value kpi-response" id="ytd-kpi-duration">--</div>
+          <div class="kpi-label">Avg Response Time</div>
+          <div class="kpi-sub" id="ytd-kpi-duration-sub"></div>
         </div>
       </div>
       <div class="chart-card glass skeleton">
@@ -588,7 +593,7 @@
     </div>
 
     <!-- Executive KPI Summary -->
-    <div class="kpi-row kpi-row-5" id="insights-kpi-row">
+    <div class="kpi-row kpi-row-6" id="insights-kpi-row">
       <div class="kpi-card glass skeleton">
         <div class="kpi-value" id="ins-kpi-alarm-cost">--</div>
         <div class="kpi-label">Est. Alarm Response Cost</div>
@@ -608,6 +613,11 @@
         <div class="kpi-value" id="ins-kpi-seasonal">--</div>
         <div class="kpi-label">Seasonal Demand Range</div>
         <div class="kpi-sub" id="ins-kpi-seasonal-sub">peak vs trough ratio</div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-response" id="ins-kpi-duration">--</div>
+        <div class="kpi-label">Avg Response Time</div>
+        <div class="kpi-sub" id="ins-kpi-duration-sub">city-wide average</div>
       </div>
       <div class="kpi-card glass skeleton">
         <div class="kpi-value" id="ins-kpi-overloaded">--</div>

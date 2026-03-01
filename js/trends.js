@@ -35,15 +35,20 @@ function renderYTDKPIs(data) {
   const currentYear = new Date().getFullYear();
   const priorYear = currentYear - 1;
 
-  // Sum up YTD by year
+  // Sum up YTD by year (weighted avg for duration)
   const yearTotals = {};
   for (const row of ytd) {
     const y = parseInt(row.dispatch_year);
-    if (!yearTotals[y]) yearTotals[y] = { total: 0, structure: 0, outside: 0, alarms: 0 };
-    yearTotals[y].total += parseInt(row.total) || 0;
+    if (!yearTotals[y]) yearTotals[y] = { total: 0, structure: 0, outside: 0, alarms: 0, durSum: 0, durCnt: 0 };
+    const total = parseInt(row.total) || 0;
+    yearTotals[y].total += total;
     yearTotals[y].structure += parseInt(row.structure_fires) || 0;
     yearTotals[y].outside += parseInt(row.outside_fires) || 0;
     yearTotals[y].alarms += parseInt(row.alarms) || 0;
+    if (row.avg_duration != null && total > 0) {
+      yearTotals[y].durSum += parseFloat(row.avg_duration) * total;
+      yearTotals[y].durCnt += total;
+    }
   }
 
   const curr = yearTotals[currentYear] || {};
@@ -53,6 +58,18 @@ function renderYTDKPIs(data) {
   setYTDKPI('ytd-kpi-structure', curr.structure, prev.structure);
   setYTDKPI('ytd-kpi-outside', curr.outside, prev.outside);
   setYTDKPI('ytd-kpi-alarms', curr.alarms, prev.alarms);
+
+  // Avg response time KPI
+  const durEl = document.getElementById('ytd-kpi-duration');
+  const durSub = document.getElementById('ytd-kpi-duration-sub');
+  if (durEl) {
+    const currDur = curr.durCnt > 0 ? (curr.durSum / curr.durCnt) : null;
+    const prevDur = prev.durCnt > 0 ? (prev.durSum / prev.durCnt) : null;
+    durEl.textContent = currDur != null ? `${currDur.toFixed(1)} min` : '--';
+    if (durSub && currDur != null && prevDur != null) {
+      durSub.innerHTML = `vs ${prevDur.toFixed(1)} min last year ${deltaBadge(currDur, prevDur)}`;
+    }
+  }
 }
 
 function setYTDKPI(id, current, prior) {

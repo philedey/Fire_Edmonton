@@ -278,6 +278,20 @@ function renderInsightsKPIs(workload, alarmBurden, seasonal, risk) {
     if (seasonalSub) seasonalSub.textContent = `${MONTH_LABELS[seasonal.peakMonth]} peak / ${MONTH_LABELS[seasonal.troughMonth]} trough`;
   }
 
+  // Avg response time (city-wide from station durations)
+  const durEl = document.getElementById('ins-kpi-duration');
+  const durSub = document.getElementById('ins-kpi-duration-sub');
+  if (durEl) {
+    const durs = workload.stations.map(s => s.avgDuration).filter(v => v != null);
+    if (durs.length) {
+      const cityAvg = durs.reduce((a, b) => a + b, 0) / durs.length;
+      const fastest = Math.min(...durs);
+      const slowest = Math.max(...durs);
+      durEl.textContent = `${cityAvg.toFixed(1)} min`;
+      if (durSub) durSub.textContent = `range: ${fastest.toFixed(1)} – ${slowest.toFixed(1)} min`;
+    }
+  }
+
   const overloadedEl = document.getElementById('ins-kpi-overloaded');
   const overloadedSub = document.getElementById('ins-kpi-overloaded-sub');
   if (overloadedEl) {

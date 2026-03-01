@@ -1,7 +1,7 @@
 import { fetchDashboardData, fetchMapPoints, fetchStationData, fetchStationList } from './api.js';
 import { initMap, setMode, updateData } from './map.js';
 import { initCharts, updateCharts } from './charts.js';
-import { initFilters, populateYears, populateStations, setMapGeojson, updateKPIs } from './filters.js';
+import { initFilters, populateYears, populateNeighbourhoods, populateStations, setMapGeojson, updateKPIs } from './filters.js';
 import { getCachedMapData, setCachedMapData, isCacheStale } from './cache.js';
 import { initExtraCharts, updateExtraChartsFromData, renderSparkline } from './charts-extra.js';
 import { initStationCharts, updateStationCharts } from './charts-station.js';
@@ -50,6 +50,12 @@ async function main() {
     updateCharts(stats);
     updateKPIs(stats);
     populateYears(availableYears);
+
+    // Populate neighbourhood dropdown from ranking data
+    if (stats.neighbourhoodRanking) {
+      const neighbourhoodNames = stats.neighbourhoodRanking.map(([name]) => name);
+      populateNeighbourhoods(neighbourhoodNames);
+    }
 
     // Extra charts from the same RPC response (no additional fetch needed)
     updateExtraChartsFromData(extraCharts);

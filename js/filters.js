@@ -26,6 +26,17 @@ export function populateYears(years) {
   }
 }
 
+export function populateNeighbourhoods(names) {
+  const select = document.getElementById('filter-neighbourhood');
+  while (select.options.length > 1) select.remove(1);
+  for (const name of names) {
+    const opt = document.createElement('option');
+    opt.value = name.toLowerCase();
+    opt.textContent = name;
+    select.appendChild(opt);
+  }
+}
+
 export function populateStations(stationNames) {
   const select = document.getElementById('filter-station');
   while (select.options.length > 1) select.remove(1);
@@ -52,9 +63,9 @@ function wireEvents() {
     triggerUpdate(true);
   });
 
-  document.getElementById('filter-neighbourhood').addEventListener('input', (e) => {
-    state.neighbourhood = e.target.value.trim().toLowerCase();
-    triggerUpdate(false);
+  document.getElementById('filter-neighbourhood').addEventListener('change', (e) => {
+    state.neighbourhood = e.target.value === 'all' ? '' : e.target.value;
+    triggerUpdate(true);
   });
 
   document.getElementById('filter-station').addEventListener('change', (e) => {
@@ -69,7 +80,7 @@ function wireEvents() {
     state.station = 'all';
     document.getElementById('filter-year').value = 'all';
     document.getElementById('filter-type').value = 'all';
-    document.getElementById('filter-neighbourhood').value = '';
+    document.getElementById('filter-neighbourhood').value = 'all';
     document.getElementById('filter-station').value = 'all';
     triggerUpdate(true);
   });
@@ -111,7 +122,9 @@ function updateFilterChips() {
     chips.push(`<span class="filter-chip"><span class="filter-chip-label">Station:</span>${state.station}</span>`);
   }
   if (state.neighbourhood) {
-    chips.push(`<span class="filter-chip"><span class="filter-chip-label">Area:</span>${state.neighbourhood}</span>`);
+    const nSelect = document.getElementById('filter-neighbourhood');
+    const nLabel = nSelect?.selectedOptions[0]?.textContent || state.neighbourhood;
+    chips.push(`<span class="filter-chip"><span class="filter-chip-label">Area:</span>${nLabel}</span>`);
   }
 
   if (chips.length) {

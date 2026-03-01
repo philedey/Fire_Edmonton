@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edmonton Fire Incidents Dashboard</title>
+
+  <!-- Mapbox GL JS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- deck.gl (3D hexbin visualization) -->
+  <script src="https://unpkg.com/deck.gl@9.1.2/dist.min.js"></script>
+
+  <!-- Dashboard styles -->
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+  <!-- Error Panel -->
+  <div id="error-panel" class="error-panel hidden">
+    <div class="error-content">
+      <h2>Something went wrong</h2>
+      <p id="error-step" class="error-step"></p>
+      <p id="error-message" class="error-message"></p>
+      <pre id="error-debug" class="error-debug"></pre>
+      <button id="error-retry" class="btn btn-accent" onclick="location.reload()">Retry</button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-text">
+      <h1><span class="header-icon">🔥</span>Edmonton Fire Incidents</h1>
+      <p>Edmonton Fire Rescue Services <span class="header-sep">|</span> Open Data Portal</p>
+    </div>
+    <div class="header-status">
+      <span id="status-dot" class="status-dot"></span>
+      <span id="status-text" class="status-text">Loading...</span>
+    </div>
+  </header>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label for="filter-year">Year</label>
+      <select id="filter-year">
+        <option value="all">All Years</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="filter-type">Fire Type</label>
+      <select id="filter-type">
+        <option value="all">All Types</option>
+        <option value="structure">Structure</option>
+        <option value="outside">Outside</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="filter-neighbourhood">Neighbourhood</label>
+      <input type="text" id="filter-neighbourhood" placeholder="Search neighbourhood...">
+    </div>
+    <div class="filter-group">
+      <label for="filter-station">Station</label>
+      <select id="filter-station">
+        <option value="all">All Stations</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="filter-map-style">Map Style</label>
+      <select id="filter-map-style">
+        <option value="heatmap">Heatmap</option>
+        <option value="clusters">Clusters</option>
+        <option value="points">Individual Points</option>
+        <option value="hexbin">3D Hexbin</option>
+      </select>
+    </div>
+    <!-- Map Layer Toggles -->
+    <div class="filter-group">
+      <label>Map Layers</label>
+      <div class="toggle-group">
+        <label class="toggle-label">
+          <input type="checkbox" id="toggle-choropleth"> Choropleth
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="toggle-stations"> Stations
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="toggle-3d"> 3D
+        </label>
+      </div>
+    </div>
+    <div class="filter-group">
+      <button id="filter-reset" class="btn btn-reset">Reset</button>
+    </div>
+  </div>
+
+  <!-- Active Filter Chips -->
+  <div id="filter-chips" class="filter-chips hidden"></div>
+
+  <!-- Progress Bar -->
+  <div id="progress-bar" class="progress-bar">
+    <div class="progress-fill" id="progress-fill"></div>
+    <span class="progress-text" id="progress-text">Loading statistics...</span>
+  </div>
+
+  <!-- KPI Row -->
+  <div class="kpi-row">
+    <div class="kpi-card skeleton">
+      <div class="kpi-value" id="kpi-total">—</div>
+      <div class="kpi-label">Total Fire Incidents</div>
+      <div class="kpi-sub" id="kpi-total-sub"></div>
+    </div>
+    <div class="kpi-card skeleton">
+      <div class="kpi-value kpi-structure" id="kpi-structure">—</div>
+      <div class="kpi-label">Structure Fires</div>
+      <div class="kpi-sub" id="kpi-structure-sub"></div>
+    </div>
+    <div class="kpi-card skeleton">
+      <div class="kpi-value kpi-outside" id="kpi-outside">—</div>
+      <div class="kpi-label">Outside Fires</div>
+      <div class="kpi-sub" id="kpi-outside-sub"></div>
+    </div>
+    <div class="kpi-card skeleton">
+      <div class="kpi-value kpi-neighbourhood" id="kpi-neighbourhood">—</div>
+      <div class="kpi-label">Top Neighbourhood</div>
+      <div class="kpi-sub" id="kpi-neighbourhood-sub"></div>
+    </div>
+    <div class="kpi-card skeleton">
+      <div class="kpi-value kpi-response" id="kpi-response">—</div>
+      <div class="kpi-label">Avg Response Duration</div>
+      <div class="kpi-sub" id="kpi-response-sub"></div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Left: Map -->
+    <div class="map-panel">
+      <div id="map" class="map-container"></div>
+      <!-- Map loading indicator (shown while points load in background) -->
+      <div id="map-loading" class="map-loading-indicator">
+        <div class="map-spinner"></div>
+        <span>Loading map data...</span>
+      </div>
+      <div class="map-legend" id="map-legend">
+        <div class="legend-title">Fire Type</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#ff4444"></span> Structure</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#ff9933"></span> Outside</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#ffcc00"></span> Other</div>
+      </div>
+      <!-- Time Slider -->
+      <div class="time-slider-panel" id="time-slider-panel">
+        <div class="time-slider-header">
+          <span class="time-slider-label">Time Lapse</span>
+          <span class="time-slider-year" id="time-slider-year">All Years</span>
+        </div>
+        <div class="time-slider-controls">
+          <button class="btn btn-slider" id="time-play" title="Play/Pause">&#9654;</button>
+          <input type="range" id="time-slider" class="time-slider" min="0" max="100" value="0">
+          <button class="btn btn-slider" id="time-reset" title="Reset">&#8634;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Charts -->
+    <div class="charts-panel">
+      <div class="chart-card skeleton">
+        <h3>Fire Incidents by Year</h3>
+        <div class="chart-wrapper"><canvas id="chart-yearly"></canvas></div>
+      </div>
+      <div class="chart-card skeleton">
+        <h3>Monthly Distribution</h3>
+        <div class="chart-wrapper"><canvas id="chart-monthly"></canvas></div>
+      </div>
+      <div class="chart-card skeleton">
+        <h3>Fire Type Breakdown</h3>
+        <div class="chart-wrapper chart-wrapper-doughnut"><canvas id="chart-doughnut"></canvas></div>
+      </div>
+      <div class="chart-card skeleton">
+        <h3>Top 15 Neighbourhoods</h3>
+        <div class="table-wrapper" id="neighbourhood-table"></div>
+      </div>
+      <div class="chart-card skeleton" id="card-hourly">
+        <h3>Incidents by Hour of Day</h3>
+        <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-hourly"></canvas></div>
+      </div>
+      <div class="chart-card skeleton" id="card-dow">
+        <h3>Incidents by Day of Week</h3>
+        <div class="chart-wrapper"><canvas id="chart-dow"></canvas></div>
+      </div>
+      <div class="chart-card skeleton" id="card-trends">
+        <h3>Year-over-Year Monthly Trends</h3>
+        <div class="chart-wrapper"><canvas id="chart-trends"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Station Analytics Section -->
+  <div class="station-section">
+    <h2 class="section-title">Calls by Fire Station</h2>
+    <p class="section-sub">Incidents assigned to nearest station via PostGIS proximity analysis (31 stations)</p>
+    <div class="station-grid">
+      <div class="chart-card skeleton" id="card-station-bar">
+        <h3>Incidents by Station</h3>
+        <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-station-bar"></canvas></div>
+      </div>
+      <div class="chart-card skeleton" id="card-station-type">
+        <h3>Fire Type Mix by Station</h3>
+        <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-station-type"></canvas></div>
+      </div>
+      <div class="chart-card skeleton" id="card-station-table">
+        <h3>Station Detail</h3>
+        <div class="table-wrapper" id="station-table"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Analysis Panel -->
+  <div id="ai-panel" class="ai-panel">
+    <div class="ai-panel-header">
+      <div class="ai-panel-title">
+        <span class="ai-icon">⚡</span>
+        <span>AI Fire Analyst</span>
+      </div>
+      <button id="ai-close" class="ai-close" title="Close">&times;</button>
+    </div>
+    <div class="ai-modes">
+      <button class="ai-mode-btn" data-mode="risk"><span class="ai-mode-icon">🎯</span>Risk Assessment</button>
+      <button class="ai-mode-btn" data-mode="anomaly"><span class="ai-mode-icon">📊</span>Anomaly Detection</button>
+      <button class="ai-mode-btn" data-mode="resource"><span class="ai-mode-icon">🚒</span>Resource Optimization</button>
+      <button class="ai-mode-btn" data-mode="forecast"><span class="ai-mode-icon">📈</span>Trend Forecast</button>
+    </div>
+    <div class="ai-query-row">
+      <input type="text" id="ai-query" class="ai-query-input" placeholder="Ask anything about the fire data...">
+      <button id="ai-ask" class="btn btn-accent ai-ask-btn">Ask</button>
+    </div>
+    <div class="ai-response-area" id="ai-response">
+      <div class="ai-placeholder">
+        <p>Select an analysis mode above or ask a question about Edmonton's fire incident data.</p>
+        <p class="ai-placeholder-sub">Claude will analyze the live dashboard data and provide insights.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Toggle Button (floating) -->
+  <button id="ai-toggle" class="ai-toggle-btn" title="AI Fire Analyst">
+    <span class="ai-toggle-icon">⚡</span>
+    <span class="ai-toggle-label">AI</span>
+  </button>
+
+  <!-- deck.gl tooltip -->
+  <div id="deck-tooltip" style="display:none;position:fixed;z-index:10;pointer-events:none;
+    background:rgba(15,25,35,0.92);color:#e0e6ed;padding:6px 10px;border-radius:4px;
+    font-size:12px;border:1px solid #2a3a4a;backdrop-filter:blur(4px);"></div>
+
+  <!-- JS Modules -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

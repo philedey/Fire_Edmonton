@@ -120,6 +120,7 @@ function buildStatsFromRpc(data) {
 
   // --- Duration ---
   const avgDuration = data.avgDuration != null ? parseFloat(data.avgDuration) : null;
+  const medianDuration = data.medianDuration != null ? parseFloat(data.medianDuration) : null;
 
   // --- Top types (for doughnut) ---
   const topTypes = typeCounts
@@ -130,7 +131,8 @@ function buildStatsFromRpc(data) {
     total, structure, outside, other,
     topNeighbourhood: topNhood[0],
     topNeighbourhoodCount: topNhood[1],
-    medianDurationMins: avgDuration,
+    medianDurationMins: medianDuration ?? avgDuration,
+    avgDurationMins: avgDuration,
     years, yearlyData, monthlyData,
     topTypes,
     neighbourhoodRanking,

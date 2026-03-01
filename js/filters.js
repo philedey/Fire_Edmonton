@@ -157,7 +157,7 @@ export function updateKPIs(stats, baselineStats = null) {
 
   if (stats.medianDurationMins !== null) {
     document.getElementById('kpi-response').textContent = `${stats.medianDurationMins.toFixed(1)} min`;
-    document.getElementById('kpi-response-sub').textContent = 'avg duration';
+    document.getElementById('kpi-response-sub').textContent = 'dispatch to close';
   } else {
     document.getElementById('kpi-response').textContent = 'N/A';
     document.getElementById('kpi-response-sub').textContent = 'no data';

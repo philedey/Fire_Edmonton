@@ -102,15 +102,15 @@ function renderStationKPIs(data, station) {
   const dur = document.getElementById('stn-kpi-duration');
   const durSub = document.getElementById('stn-kpi-duration-sub');
   if (dur) {
-    const avg = curr.avg_duration != null ? parseFloat(curr.avg_duration).toFixed(1) : '--';
-    dur.textContent = avg !== '--' ? `${avg} min` : '--';
+    const med = curr.median_duration != null ? parseFloat(curr.median_duration).toFixed(1) : '--';
+    dur.textContent = med !== '--' ? `${med} min` : '--';
 
     if (durSub) {
       const allStations = data.allStationsYtd || [];
-      const durs = allStations.map(r => parseFloat(r.avg_duration)).filter(v => !isNaN(v));
+      const durs = allStations.map(r => parseFloat(r.median_duration)).filter(v => !isNaN(v));
       if (durs.length) {
-        const cityAvg = (durs.reduce((a, b) => a + b, 0) / durs.length).toFixed(1);
-        durSub.textContent = `City avg: ${cityAvg} min`;
+        const cityMed = (durs.reduce((a, b) => a + b, 0) / durs.length).toFixed(1);
+        durSub.textContent = `City median: ${cityMed} min`;
       }
     }
   }
@@ -412,10 +412,10 @@ function renderDurationComparison(data) {
   const kpis = data.stationKpis || [];
   const currentYear = data.currentYear || new Date().getFullYear();
   const curr = kpis.find(r => r.dispatch_year === currentYear) || {};
-  const stnDur = curr.avg_duration != null ? parseFloat(curr.avg_duration) : null;
+  const stnDur = curr.median_duration != null ? parseFloat(curr.median_duration) : null;
 
   const allStations = data.allStationsYtd || [];
-  const durs = allStations.map(r => parseFloat(r.avg_duration)).filter(v => !isNaN(v));
+  const durs = allStations.map(r => parseFloat(r.median_duration)).filter(v => !isNaN(v));
   const cityAvg = durs.length ? durs.reduce((a, b) => a + b, 0) / durs.length : null;
 
   if (stnDur == null || cityAvg == null) {
@@ -504,7 +504,7 @@ function renderAllStationsTable(data, selectedStation) {
     const structure = parseInt(row.structure_ytd) || 0;
     const outside = parseInt(row.outside_ytd) || 0;
     const alarms = parseInt(row.alarms_ytd) || 0;
-    const dur = row.avg_duration != null ? parseFloat(row.avg_duration).toFixed(1) : '--';
+    const dur = row.median_duration != null ? parseFloat(row.median_duration).toFixed(1) : '--';
 
     const workloadPct = median > 0 ? (total / median) * 100 : 0;
     let workloadClass, workloadLabel;

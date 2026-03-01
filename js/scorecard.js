@@ -17,7 +17,7 @@ const METRICS = [
   { key: 'structure', label: 'Structure Fires', field: 'structure_ytd', mode: 'lower' },
   { key: 'outside', label: 'Outside Fires', field: 'outside_ytd', mode: 'lower' },
   { key: 'alarms', label: 'Alarms', field: 'alarms_ytd', mode: 'lower' },
-  { key: 'duration', label: 'Avg Duration (min)', field: 'avg_duration', mode: 'lower' },
+  { key: 'duration', label: 'Median Duration (min)', field: 'median_duration', mode: 'lower' },
   { key: 'rank', label: 'City Rank', field: 'rank', mode: 'neutral' },
   { key: 'alarmRatio', label: 'Alarm Ratio', compute: r => r.total_ytd > 0 ? (r.alarms_ytd / r.total_ytd * 100) : 0, mode: 'lower', suffix: '%' },
   { key: 'workload', label: 'Workload Score', compute: null, mode: 'closer100', suffix: '%' },

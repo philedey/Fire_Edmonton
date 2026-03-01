@@ -144,7 +144,7 @@ function renderStationTable(stations, stationYearly) {
           <th>Struct</th>
           <th>Outside</th>
           <th>Alarms</th>
-          <th>Avg Dur</th>
+          <th>Med Dur</th>
           <th>Trend</th>
         </tr>
       </thead>
@@ -165,7 +165,7 @@ function renderStationTable(stations, stationYearly) {
         <td class="num-cell">${s.structure_fires.toLocaleString()}</td>
         <td class="num-cell">${s.outside_fires.toLocaleString()}</td>
         <td class="num-cell">${s.alarms.toLocaleString()}</td>
-        <td class="num-cell">${s.avg_duration_mins || '—'}m</td>
+        <td class="num-cell">${s.median_duration_mins || s.avg_duration_mins || '—'}m</td>
         <td class="sparkline-cell">${sparkSvg}</td>
       </tr>
     `;

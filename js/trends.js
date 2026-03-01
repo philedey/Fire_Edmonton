@@ -30,12 +30,12 @@ export async function initTrends(baselineStats, baselineExtraCharts) {
 // --- YTD KPI cards ---
 
 function renderYTDKPIs(data) {
-  // ytdComparison: [{dispatch_year, dispatch_month, total, structure_fires, outside_fires, alarms, avg_duration}]
+  // ytdComparison: [{dispatch_year, dispatch_month, total, structure_fires, outside_fires, alarms, avg_duration, median_duration}]
   const ytd = data?.ytdComparison || [];
   const currentYear = new Date().getFullYear();
   const priorYear = currentYear - 1;
 
-  // Sum up YTD by year (weighted avg for duration)
+  // Sum up YTD by year (weighted median for duration)
   const yearTotals = {};
   for (const row of ytd) {
     const y = parseInt(row.dispatch_year);
@@ -45,8 +45,9 @@ function renderYTDKPIs(data) {
     yearTotals[y].structure += parseInt(row.structure_fires) || 0;
     yearTotals[y].outside += parseInt(row.outside_fires) || 0;
     yearTotals[y].alarms += parseInt(row.alarms) || 0;
-    if (row.avg_duration != null && total > 0) {
-      yearTotals[y].durSum += parseFloat(row.avg_duration) * total;
+    const dur = row.median_duration ?? row.avg_duration;
+    if (dur != null && total > 0) {
+      yearTotals[y].durSum += parseFloat(dur) * total;
       yearTotals[y].durCnt += total;
     }
   }
@@ -59,7 +60,7 @@ function renderYTDKPIs(data) {
   setYTDKPI('ytd-kpi-outside', curr.outside, prev.outside);
   setYTDKPI('ytd-kpi-alarms', curr.alarms, prev.alarms);
 
-  // Avg response time KPI
+  // Median event duration KPI
   const durEl = document.getElementById('ytd-kpi-duration');
   const durSub = document.getElementById('ytd-kpi-duration-sub');
   if (durEl) {

@@ -74,7 +74,7 @@ function computeWorkloadAnalysis(comparisonData) {
         structure: parseInt(r.structure_ytd) || 0,
         outside: parseInt(r.outside_ytd) || 0,
         alarms: parseInt(r.alarms_ytd) || 0,
-        avgDuration: r.avg_duration != null ? parseFloat(r.avg_duration) : null,
+        avgDuration: r.median_duration != null ? parseFloat(r.median_duration) : (r.avg_duration != null ? parseFloat(r.avg_duration) : null),
         pctOfMedian,
         status: getWorkloadStatus(pctOfMedian),
       };
@@ -278,16 +278,16 @@ function renderInsightsKPIs(workload, alarmBurden, seasonal, risk) {
     if (seasonalSub) seasonalSub.textContent = `${MONTH_LABELS[seasonal.peakMonth]} peak / ${MONTH_LABELS[seasonal.troughMonth]} trough`;
   }
 
-  // Avg response time (city-wide from station durations)
+  // Median event duration (city-wide from station medians)
   const durEl = document.getElementById('ins-kpi-duration');
   const durSub = document.getElementById('ins-kpi-duration-sub');
   if (durEl) {
     const durs = workload.stations.map(s => s.avgDuration).filter(v => v != null);
     if (durs.length) {
-      const cityAvg = durs.reduce((a, b) => a + b, 0) / durs.length;
+      const cityMed = durs.reduce((a, b) => a + b, 0) / durs.length;
       const fastest = Math.min(...durs);
       const slowest = Math.max(...durs);
-      durEl.textContent = `${cityAvg.toFixed(1)} min`;
+      durEl.textContent = `${cityMed.toFixed(1)} min`;
       if (durSub) durSub.textContent = `range: ${fastest.toFixed(1)} – ${slowest.toFixed(1)} min`;
     }
   }
@@ -358,7 +358,7 @@ function renderWorkloadTable(workload) {
   if (!container) return;
 
   let html = `<table class="ops-table"><thead><tr>
-    <th>#</th><th>Station</th><th>Calls</th><th>% Median</th><th>Status</th><th>Avg Dur</th>
+    <th>#</th><th>Station</th><th>Calls</th><th>% Median</th><th>Status</th><th>Med Dur</th>
   </tr></thead><tbody>`;
 
   workload.stations.forEach((s, i) => {

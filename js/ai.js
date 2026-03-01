@@ -111,7 +111,7 @@ function formatStats(stats) {
 - Outside fires: ${stats.outside?.toLocaleString() || 0} (${pct(stats.outside, stats.total)})
 - Alarms: ${stats.other?.toLocaleString() || 0} (${pct(stats.other, stats.total)})
 - Top neighbourhood: ${stats.topNeighbourhood || 'N/A'} (${stats.topNeighbourhoodCount?.toLocaleString() || 0} incidents)
-- Avg response duration: ${stats.medianDurationMins?.toFixed(1) || 'N/A'} minutes
+- Median event duration: ${stats.medianDurationMins?.toFixed(1) || 'N/A'} minutes (dispatch to close, not arrival time)
 - Data range: ${stats.years?.[0] || '?'} – ${stats.years?.[stats.years.length - 1] || '?'}`;
 
   if (stats.yearlyData) {
@@ -176,7 +176,7 @@ function formatStationData(stationData) {
   const sorted = [...stationData.stationCalls].sort((a, b) => b.total_incidents - a.total_incidents);
 
   for (const s of sorted) {
-    text += `\n  Station ${s.station_name}: ${s.total_incidents.toLocaleString()} total | struct: ${s.structure_fires} | outside: ${s.outside_fires} | alarms: ${s.alarms} | avg dur: ${s.avg_duration_mins || '?'}min`;
+    text += `\n  Station ${s.station_name}: ${s.total_incidents.toLocaleString()} total | struct: ${s.structure_fires} | outside: ${s.outside_fires} | alarms: ${s.alarms} | med dur: ${s.median_duration_mins || s.avg_duration_mins || '?'}min`;
   }
 
   return text;
@@ -357,7 +357,7 @@ ${ctx.dataText}
 REQUIRED OUTPUT:
 1. **Volume Assessment**: This station handles ${ctx.totalYtd} calls YTD, ranked #${ctx.rank} of 31 stations. Classify workload as High/Medium/Low relative to peers.
 2. **Trend Analysis**: Using monthly data, identify if call volume is trending up, down, or stable vs city average.
-3. **Duration**: Station avg duration is ${ctx.avgDuration} min vs city avg ${ctx.cityAvgDuration} min. Assess whether this is within normal range.
+3. **Duration**: Station median event duration is ${ctx.medianDuration} min vs city median ${ctx.cityMedianDuration} min. Note: duration = dispatch to event close, not arrival time. Assess whether this is within normal range.
 4. **Year-over-Year**: Compare current year to prior year. Flag any significant shifts in volume or fire type mix.
 5. **Key Takeaway**: One actionable insight for station leadership.`,
   },
@@ -403,7 +403,7 @@ export function formatStationAnalysisData(stationData, equipData, station) {
   const curr = kpis.find(r => r.dispatch_year === currentYear) || {};
   const prior = kpis.find(r => r.dispatch_year === priorYear) || {};
 
-  text += `\nYTD (${currentYear}): ${curr.total || 0} total | Structure: ${curr.structure_fires || 0} | Outside: ${curr.outside_fires || 0} | Alarms: ${curr.alarms || 0} | Avg Duration: ${curr.avg_duration ? parseFloat(curr.avg_duration).toFixed(1) : '?'} min`;
+  text += `\nYTD (${currentYear}): ${curr.total || 0} total | Structure: ${curr.structure_fires || 0} | Outside: ${curr.outside_fires || 0} | Alarms: ${curr.alarms || 0} | Median Duration: ${curr.median_duration ? parseFloat(curr.median_duration).toFixed(1) : (curr.avg_duration ? parseFloat(curr.avg_duration).toFixed(1) : '?')} min`;
   text += `\nPrior Year (${priorYear}): ${prior.total || 0} total | Structure: ${prior.structure_fires || 0} | Outside: ${prior.outside_fires || 0} | Alarms: ${prior.alarms || 0}`;
 
   if (kpis.length > 2) {
@@ -432,12 +432,12 @@ export function formatStationAnalysisData(stationData, equipData, station) {
     for (const r of top10) {
       const marker = r.station_name === station ? ' <<<' : '';
       const idx = sorted.indexOf(r) + 1;
-      text += `\n  #${idx} Station ${r.station_name}: ${r.total_ytd} calls, avg dur ${parseFloat(r.avg_duration).toFixed(1)} min${marker}`;
+      text += `\n  #${idx} Station ${r.station_name}: ${r.total_ytd} calls, med dur ${parseFloat(r.median_duration || r.avg_duration).toFixed(1)} min${marker}`;
     }
     const thisStation = sorted.find(r => r.station_name === station);
     if (thisStation && !top10.find(r => r.station_name === station)) {
       const rank = sorted.indexOf(thisStation) + 1;
-      text += `\n  #${rank} Station ${station}: ${thisStation.total_ytd} calls, avg dur ${parseFloat(thisStation.avg_duration).toFixed(1)} min <<<`;
+      text += `\n  #${rank} Station ${station}: ${thisStation.total_ytd} calls, med dur ${parseFloat(thisStation.median_duration || thisStation.avg_duration).toFixed(1)} min <<<`;
     }
   }
 
@@ -487,8 +487,8 @@ export function buildStationPrompt(modeId, stationData, equipData, station, user
 
   const allStations = stationData?.allStationsYtd || [];
   const thisStation = allStations.find(r => r.station_name === station);
-  const durs = allStations.map(r => parseFloat(r.avg_duration)).filter(v => !isNaN(v));
-  const cityAvgDur = durs.length ? (durs.reduce((a, b) => a + b, 0) / durs.length).toFixed(1) : '?';
+  const durs = allStations.map(r => parseFloat(r.median_duration || r.avg_duration)).filter(v => !isNaN(v));
+  const cityMedDur = durs.length ? (durs.reduce((a, b) => a + b, 0) / durs.length).toFixed(1) : '?';
 
   const multi = equipData?.multiUnitFrequency || {};
 
@@ -497,8 +497,8 @@ export function buildStationPrompt(modeId, stationData, equipData, station, user
     dataText,
     totalYtd: total,
     rank: thisStation?.rank || '?',
-    avgDuration: curr.avg_duration ? parseFloat(curr.avg_duration).toFixed(1) : '?',
-    cityAvgDuration: cityAvgDur,
+    medianDuration: curr.median_duration ? parseFloat(curr.median_duration).toFixed(1) : (curr.avg_duration ? parseFloat(curr.avg_duration).toFixed(1) : '?'),
+    cityMedianDuration: cityMedDur,
     structurePct: total > 0 ? ((struct / total) * 100).toFixed(1) : '0',
     outsidePct: total > 0 ? ((outside / total) * 100).toFixed(1) : '0',
     alarmsPct: total > 0 ? ((alarms / total) * 100).toFixed(1) : '0',

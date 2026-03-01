@@ -10,6 +10,8 @@
  * New layers are inserted BELOW existing fire layers so they never obscure incident data.
  */
 
+import { navigateToTab } from './tabs.js';
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const NEIGHBOURHOOD_URL = 'https://data.edmonton.ca/resource/65fr-66s6.geojson';
@@ -289,16 +291,32 @@ function createStationMarkers(stations) {
     el.innerHTML = createStationSVG();
     el.title = `Station ${stationName}`;
 
-    // Build popup
-    const popup = new mapboxgl.Popup({ offset: 18, closeButton: true, closeOnClick: true })
+    // Build popup with "View Details" link
+    const popupEl = new mapboxgl.Popup({ offset: 18, closeButton: true, closeOnClick: true })
       .setHTML(
         `<div class="popup-title">Station ${stationName}</div>` +
-        (address ? `<div class="popup-row"><span class="popup-label">Address:</span><span>${address}</span></div>` : '')
+        (address ? `<div class="popup-row"><span class="popup-label">Address:</span><span>${address}</span></div>` : '') +
+        `<div class="popup-row" style="margin-top:6px"><a href="#stations" class="station-link" data-station="${stationName}" style="color:var(--accent);font-size:11px;cursor:pointer">View Station Details &rarr;</a></div>`
       );
+
+    popupEl.on('open', () => {
+      setTimeout(() => {
+        const link = document.querySelector(`.station-link[data-station="${stationName}"]`);
+        if (link) {
+          link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const sel = document.getElementById('station-select');
+            if (sel) { sel.value = stationName; sel.dispatchEvent(new Event('change')); }
+            navigateToTab('stations');
+            popupEl.remove();
+          });
+        }
+      }, 50);
+    });
 
     const marker = new mapboxgl.Marker({ element: el })
       .setLngLat([lng, lat])
-      .setPopup(popup)
+      .setPopup(popupEl)
       .addTo(_map);
 
     _stationMarkers.push(marker);

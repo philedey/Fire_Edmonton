@@ -1,3 +1,5 @@
+import { navigateToTab } from './tabs.js';
+
 const MAPBOX_TOKEN = 'pk.eyJ1IjoicGhpbGVkZXkiLCJhIjoiY21mcTB2OTJ4MGx0cjJrcHlvNDFtcWxuZiJ9.PlD_NmzV2pPlYoi6u41T3Q';
 const EDMONTON_CENTER = [-113.4938, 53.5461];
 const INITIAL_ZOOM = 10.5;
@@ -568,6 +570,10 @@ function showPopup(e) {
       })
     : 'N/A';
 
+  const durationStr = props.duration ? `${props.duration} min` : '';
+  const rcLabels = { ST: 'Structure', AL: 'Alarm', NF: 'No Fire', DG: 'Hazmat', BO: 'Bomb', IV: 'Investigation', ME: 'Medical', OT: 'Other' };
+  const rcLabel = rcLabels[props.responseCode] || props.responseCode || '';
+
   popup
     .setLngLat(coords)
     .setHTML(`
@@ -579,6 +585,10 @@ function showPopup(e) {
       <div class="popup-row"><span class="popup-label">Neighbourhood:</span><span>${props.neighbourhood || 'N/A'}</span></div>
       <div class="popup-row"><span class="popup-label">Date:</span><span>${dateStr}</span></div>
       ${props.address ? `<div class="popup-row"><span class="popup-label">Address:</span><span>${props.address}</span></div>` : ''}
+      ${props.station ? `<div class="popup-row"><span class="popup-label">Station:</span><span>${props.station}</span></div>` : ''}
+      ${durationStr ? `<div class="popup-row"><span class="popup-label">Duration:</span><span>${durationStr}</span></div>` : ''}
+      ${rcLabel ? `<div class="popup-row"><span class="popup-label">Response:</span><span>${rcLabel}</span></div>` : ''}
+      ${props.equipment ? `<div class="popup-row"><span class="popup-label">Equipment:</span><span style="font-size:10px">${props.equipment}</span></div>` : ''}
     `)
     .addTo(map);
 }

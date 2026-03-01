@@ -141,7 +141,7 @@ function buildStatsFromRpc(data) {
 // --- Phase 2: Map point data (from Supabase REST) ---
 
 export async function fetchMapPoints(onProgress) {
-  const selectFields = 'latitude,longitude,event_description,neighbourhood_name,dispatch_datetime,approximate_location,nearest_station';
+  const selectFields = 'latitude,longitude,event_description,neighbourhood_name,dispatch_datetime,approximate_location,nearest_station,equipment_assigned,response_code,event_duration_mins';
   let allData = [];
   let offset = 0;
 
@@ -183,6 +183,9 @@ function buildGeoJSON(rows) {
         dispatchTime: r.dispatch_datetime || '',
         address: r.approximate_location || '',
         station: r.nearest_station || '',
+        equipment: r.equipment_assigned || '',
+        responseCode: r.response_code || '',
+        duration: r.event_duration_mins != null ? r.event_duration_mins : '',
       },
     });
   }
@@ -204,5 +207,67 @@ export async function fetchStationList() {
 export async function fetchStationData() {
   const data = await supabaseRpc('station_data', {});
   return data;
+}
+
+// --- Station comparison (for Station Comparison tab) ---
+
+export async function fetchStationComparison(station) {
+  const data = await supabaseRpc('station_comparison', {
+    p_station: station || null,
+  });
+  return data;
+}
+
+// --- Equipment analytics ---
+
+export async function fetchEquipmentAnalytics(year, station) {
+  const params = {};
+  if (year) params.p_year = year;
+  if (station) params.p_station = station;
+  const data = await supabaseRpc('equipment_analytics', params);
+  return data;
+}
+
+// --- Operational KPIs (duration, response codes, YTD) ---
+
+export async function fetchOperationalKPIs(year) {
+  const params = {};
+  if (year) params.p_year = year;
+  const data = await supabaseRpc('operational_kpis', params);
+  return data;
+}
+
+// --- Station duration buckets (direct REST query, client-side bucketing) ---
+
+export async function fetchStationDurationBuckets(station) {
+  let allRows = [];
+  let offset = 0;
+  const batchSize = 1000;
+
+  while (true) {
+    const page = await supabaseRest('fire_incidents', {
+      select: 'event_duration_mins',
+      nearest_station: `eq.${station}`,
+      'event_duration_mins': 'not.is.null',
+      limit: batchSize,
+      offset,
+    });
+    allRows = allRows.concat(page);
+    if (page.length < batchSize) break;
+    offset += batchSize;
+  }
+
+  const buckets = { '0-5': 0, '5-15': 0, '15-30': 0, '30-60': 0, '60-120': 0, '120+': 0 };
+  for (const r of allRows) {
+    const d = parseFloat(r.event_duration_mins);
+    if (d <= 5) buckets['0-5']++;
+    else if (d <= 15) buckets['5-15']++;
+    else if (d <= 30) buckets['15-30']++;
+    else if (d <= 60) buckets['30-60']++;
+    else if (d <= 120) buckets['60-120']++;
+    else buckets['120+']++;
+  }
+  const total = Object.values(buckets).reduce((a, b) => a + b, 0);
+  return { buckets, total };
 }
 

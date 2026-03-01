@@ -328,3 +328,186 @@ export function buildPrompt(modeId, stats, stationData, userQuery) {
 export function getSystemPrompt() {
   return SYSTEM_PROMPT;
 }
+
+// --- Station-specific AI analysis ---
+
+export const STATION_ANALYSIS_MODES = [
+  {
+    id: 'stn-equipment',
+    label: 'Equipment Analysis',
+    icon: '\u{1F527}',
+    prompt: (ctx) => `Analyze equipment deployment patterns for Edmonton Fire Station ${ctx.station}:
+
+${ctx.dataText}
+
+REQUIRED OUTPUT:
+1. **Equipment Profile**: Which unit types does this station deploy most? How does the mix compare to a typical station?
+2. **Multi-Unit Patterns**: ${ctx.multiUnitPct}% of incidents require 3+ unit types. Is this above or below typical? What drives multi-unit responses?
+3. **Top Equipment Combos**: Identify the most common equipment combinations and what incident types they likely serve.
+4. **Key Takeaway**: One actionable observation about this station's equipment utilization.`,
+  },
+  {
+    id: 'stn-performance',
+    label: 'Performance Review',
+    icon: '\u{1F4CA}',
+    prompt: (ctx) => `Review performance for Edmonton Fire Station ${ctx.station}:
+
+${ctx.dataText}
+
+REQUIRED OUTPUT:
+1. **Volume Assessment**: This station handles ${ctx.totalYtd} calls YTD, ranked #${ctx.rank} of 31 stations. Classify workload as High/Medium/Low relative to peers.
+2. **Trend Analysis**: Using monthly data, identify if call volume is trending up, down, or stable vs city average.
+3. **Duration**: Station avg duration is ${ctx.avgDuration} min vs city avg ${ctx.cityAvgDuration} min. Assess whether this is within normal range.
+4. **Year-over-Year**: Compare current year to prior year. Flag any significant shifts in volume or fire type mix.
+5. **Key Takeaway**: One actionable insight for station leadership.`,
+  },
+  {
+    id: 'stn-response',
+    label: 'Response Patterns',
+    icon: '\u{1F3AF}',
+    prompt: (ctx) => `Analyze response patterns for Edmonton Fire Station ${ctx.station}:
+
+${ctx.dataText}
+
+REQUIRED OUTPUT:
+1. **Fire Type Mix**: Break down structure fires (${ctx.structurePct}%), outside fires (${ctx.outsidePct}%), and alarms (${ctx.alarmsPct}%). Compare to city-wide ratios.
+2. **Response Codes**: Identify the dominant response codes and any unusual distributions.
+3. **Seasonal Patterns**: Using monthly trend data, identify peak months and any seasonal anomalies.
+4. **Key Takeaway**: One pattern that station leadership should monitor.`,
+  },
+  {
+    id: 'stn-query',
+    label: 'Ask About Station',
+    icon: '\u{1F4AC}',
+    prompt: null,
+  },
+];
+
+export function getStationSystemPrompt() {
+  return SYSTEM_PROMPT + `
+
+STATION ANALYSIS CONTEXT:
+You are analyzing a specific fire station. Focus on station-level performance, not city-wide trends.
+- Compare this station's metrics to city averages and peer stations when data is available.
+- Equipment combinations reflect what units typically respond together; common combos include Engine+Ladder, Engine+Rescue, etc.
+- Multi-unit percentage indicates incident complexity — stations with more structure fires typically have higher multi-unit rates.
+- Station assignments are proximity-based estimates, not actual dispatch records.`;
+}
+
+export function formatStationAnalysisData(stationData, equipData, station) {
+  let text = `STATION ${station} DATA:\n`;
+
+  const kpis = stationData?.stationKpis || [];
+  const currentYear = stationData?.currentYear || new Date().getFullYear();
+  const priorYear = stationData?.priorYear || currentYear - 1;
+  const curr = kpis.find(r => r.dispatch_year === currentYear) || {};
+  const prior = kpis.find(r => r.dispatch_year === priorYear) || {};
+
+  text += `\nYTD (${currentYear}): ${curr.total || 0} total | Structure: ${curr.structure_fires || 0} | Outside: ${curr.outside_fires || 0} | Alarms: ${curr.alarms || 0} | Avg Duration: ${curr.avg_duration ? parseFloat(curr.avg_duration).toFixed(1) : '?'} min`;
+  text += `\nPrior Year (${priorYear}): ${prior.total || 0} total | Structure: ${prior.structure_fires || 0} | Outside: ${prior.outside_fires || 0} | Alarms: ${prior.alarms || 0}`;
+
+  if (kpis.length > 2) {
+    text += '\n\nYEARLY HISTORY:';
+    for (const row of [...kpis].sort((a, b) => a.dispatch_year - b.dispatch_year)) {
+      text += `\n  ${row.dispatch_year}: ${row.total} total (struct: ${row.structure_fires}, outside: ${row.outside_fires}, alarms: ${row.alarms})`;
+    }
+  }
+
+  const monthly = (stationData?.monthlyTrend || []).slice(-12);
+  if (monthly.length) {
+    text += '\n\nMONTHLY TREND (last 12 months):';
+    text += '\n  ' + monthly.map(r => `${r.dispatch_year}-${String(r.dispatch_month).padStart(2, '0')}: ${r.total}`).join(', ');
+  }
+
+  const cityAvg = (stationData?.cityAvgMonthly || []).slice(-12);
+  if (cityAvg.length) {
+    text += '\n  City Avg: ' + cityAvg.map(r => `${r.dispatch_year}-${String(r.dispatch_month).padStart(2, '0')}: ${parseFloat(r.avg_total).toFixed(0)}`).join(', ');
+  }
+
+  const allStations = stationData?.allStationsYtd || [];
+  const sorted = [...allStations].sort((a, b) => (parseInt(b.total_ytd) || 0) - (parseInt(a.total_ytd) || 0));
+  if (sorted.length) {
+    text += '\n\nSTATION RANKING (top 10):';
+    const top10 = sorted.slice(0, 10);
+    for (const r of top10) {
+      const marker = r.station_name === station ? ' <<<' : '';
+      const idx = sorted.indexOf(r) + 1;
+      text += `\n  #${idx} Station ${r.station_name}: ${r.total_ytd} calls, avg dur ${parseFloat(r.avg_duration).toFixed(1)} min${marker}`;
+    }
+    const thisStation = sorted.find(r => r.station_name === station);
+    if (thisStation && !top10.find(r => r.station_name === station)) {
+      const rank = sorted.indexOf(thisStation) + 1;
+      text += `\n  #${rank} Station ${station}: ${thisStation.total_ytd} calls, avg dur ${parseFloat(thisStation.avg_duration).toFixed(1)} min <<<`;
+    }
+  }
+
+  const codes = stationData?.responseCodes || [];
+  if (codes.length) {
+    text += '\n\nRESPONSE CODES:';
+    text += '\n  ' + codes.map(r => `${r.response_code}: ${r.cnt}`).join(', ');
+  }
+
+  if (equipData) {
+    const units = (equipData.byUnitType || []).slice(0, 10);
+    if (units.length) {
+      text += '\n\nEQUIPMENT DEPLOYMENTS:';
+      text += '\n  ' + units.map(r => `${r.unit_type}: ${r.units_deployed || r.incidents} deployments`).join(', ');
+    }
+
+    const multi = equipData.multiUnitFrequency || {};
+    if (multi.multi_unit_pct != null) {
+      text += `\n\nMULTI-UNIT: ${multi.multi_unit_pct}% of incidents require 3+ unit types (${multi.multi_unit_incidents} of ${multi.total_incidents})`;
+    }
+
+    const combos = (equipData.topCombos || []).slice(0, 5);
+    if (combos.length) {
+      text += '\n\nTOP EQUIPMENT COMBOS:';
+      for (const c of combos) {
+        text += `\n  ${c.equipment_assigned}: ${c.cnt} incidents`;
+      }
+    }
+  }
+
+  return text;
+}
+
+export function buildStationPrompt(modeId, stationData, equipData, station, userQuery) {
+  const mode = STATION_ANALYSIS_MODES.find(m => m.id === modeId);
+  if (!mode) return null;
+
+  const dataText = formatStationAnalysisData(stationData, equipData, station);
+
+  const kpis = stationData?.stationKpis || [];
+  const currentYear = stationData?.currentYear || new Date().getFullYear();
+  const curr = kpis.find(r => r.dispatch_year === currentYear) || {};
+  const total = parseInt(curr.total) || 0;
+  const struct = parseInt(curr.structure_fires) || 0;
+  const outside = parseInt(curr.outside_fires) || 0;
+  const alarms = parseInt(curr.alarms) || 0;
+
+  const allStations = stationData?.allStationsYtd || [];
+  const thisStation = allStations.find(r => r.station_name === station);
+  const durs = allStations.map(r => parseFloat(r.avg_duration)).filter(v => !isNaN(v));
+  const cityAvgDur = durs.length ? (durs.reduce((a, b) => a + b, 0) / durs.length).toFixed(1) : '?';
+
+  const multi = equipData?.multiUnitFrequency || {};
+
+  const ctx = {
+    station,
+    dataText,
+    totalYtd: total,
+    rank: thisStation?.rank || '?',
+    avgDuration: curr.avg_duration ? parseFloat(curr.avg_duration).toFixed(1) : '?',
+    cityAvgDuration: cityAvgDur,
+    structurePct: total > 0 ? ((struct / total) * 100).toFixed(1) : '0',
+    outsidePct: total > 0 ? ((outside / total) * 100).toFixed(1) : '0',
+    alarmsPct: total > 0 ? ((alarms / total) * 100).toFixed(1) : '0',
+    multiUnitPct: multi.multi_unit_pct != null ? parseFloat(multi.multi_unit_pct).toFixed(1) : '?',
+  };
+
+  if (modeId === 'stn-query') {
+    return `Based on this station data, answer the following question:\n\n${dataText}\n\nQuestion: ${userQuery}`;
+  }
+
+  return mode.prompt(ctx);
+}

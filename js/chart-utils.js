@@ -1,5 +1,42 @@
 // Shared Chart.js defaults and utilities used across chart modules
 
+export const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export const CHART_COLORS = [
+  '#ff6b35', '#4ecdc4', '#ff4444', '#ffcc00', '#a855f7',
+  '#3b82f6', '#10b981', '#f472b6', '#06b6d4', '#f97316',
+  '#84cc16', '#ec4899', '#14b8a6', '#f59e0b', '#8b5cf6',
+];
+
+export const RESPONSE_CODE_LABELS = {
+  ST: 'Structure Fire', AL: 'Alarm', NF: 'No Fire',
+  DG: 'Dangerous Goods', BO: 'Bomb', IV: 'Investigation',
+  ME: 'Medical', OT: 'Other',
+};
+
+export const RESPONSE_CODE_COLORS = {
+  ST: '#ff4444', AL: '#ffcc00', NF: '#7a8a9a', DG: '#a855f7',
+  BO: '#ef4444', IV: '#3b82f6', ME: '#4ecdc4', OT: '#94a3b8',
+};
+
+export function deltaBadge(current, prior) {
+  if (prior == null || prior === 0) return '';
+  const delta = ((current - prior) / prior * 100).toFixed(1);
+  const sign = delta > 0 ? '+' : '';
+  const cls = delta > 0 ? 'delta-up' : delta < 0 ? 'delta-down' : 'delta-flat';
+  return `<span class="delta-badge ${cls}">${sign}${delta}%</span>`;
+}
+
+export function formatNum(n) {
+  if (n == null || isNaN(n)) return '--';
+  return Number(n).toLocaleString();
+}
+
+export function removeSkeleton(tabName) {
+  const panel = document.querySelector(`.tab-panel[data-tab="${tabName}"]`);
+  if (panel) panel.querySelectorAll('.skeleton').forEach(el => el.classList.remove('skeleton'));
+}
+
 export const CHART_DEFAULTS = {
   responsive: true,
   maintainAspectRatio: false,

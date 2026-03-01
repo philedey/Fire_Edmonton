@@ -43,64 +43,27 @@
     </div>
   </header>
 
-  <!-- Filter Bar -->
-  <div class="filter-bar">
-    <div class="filter-group">
-      <label for="filter-year">Year</label>
-      <select id="filter-year">
-        <option value="all">All Years</option>
-      </select>
+  <!-- Tab Navigation -->
+  <nav class="tab-nav">
+    <div class="tab-nav-inner">
+      <button class="tab-btn active" data-tab="overview">
+        <svg class="tab-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zm10 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/></svg>
+        Overview
+      </button>
+      <button class="tab-btn" data-tab="stations">
+        <svg class="tab-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 01-1 1h-2a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"/></svg>
+        Stations
+      </button>
+      <button class="tab-btn" data-tab="operations">
+        <svg class="tab-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"/></svg>
+        Operations
+      </button>
+      <button class="tab-btn" data-tab="trends">
+        <svg class="tab-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L8 10.414l1.293 1.293a1 1 0 001.414 0l4-4z"/></svg>
+        Trends
+      </button>
     </div>
-    <div class="filter-group">
-      <label for="filter-type">Fire Type</label>
-      <select id="filter-type">
-        <option value="all">All Types</option>
-        <option value="structure">Structure</option>
-        <option value="outside">Outside</option>
-        <option value="other">Other</option>
-      </select>
-    </div>
-    <div class="filter-group">
-      <label for="filter-neighbourhood">Neighbourhood</label>
-      <input type="text" id="filter-neighbourhood" placeholder="Search neighbourhood...">
-    </div>
-    <div class="filter-group">
-      <label for="filter-station">Station</label>
-      <select id="filter-station">
-        <option value="all">All Stations</option>
-      </select>
-    </div>
-    <div class="filter-group">
-      <label for="filter-map-style">Map Style</label>
-      <select id="filter-map-style">
-        <option value="heatmap">Heatmap</option>
-        <option value="clusters">Clusters</option>
-        <option value="points">Individual Points</option>
-        <option value="hexbin">3D Hexbin</option>
-      </select>
-    </div>
-    <!-- Map Layer Toggles -->
-    <div class="filter-group">
-      <label>Map Layers</label>
-      <div class="toggle-group">
-        <label class="toggle-label">
-          <input type="checkbox" id="toggle-choropleth"> Choropleth
-        </label>
-        <label class="toggle-label">
-          <input type="checkbox" id="toggle-stations"> Stations
-        </label>
-        <label class="toggle-label">
-          <input type="checkbox" id="toggle-3d"> 3D
-        </label>
-      </div>
-    </div>
-    <div class="filter-group">
-      <button id="filter-reset" class="btn btn-reset">Reset</button>
-    </div>
-  </div>
-
-  <!-- Active Filter Chips -->
-  <div id="filter-chips" class="filter-chips hidden"></div>
+  </nav>
 
   <!-- Progress Bar -->
   <div id="progress-bar" class="progress-bar">
@@ -108,114 +71,497 @@
     <span class="progress-text" id="progress-text">Loading statistics...</span>
   </div>
 
-  <!-- KPI Row -->
-  <div class="kpi-row">
-    <div class="kpi-card skeleton">
-      <div class="kpi-value" id="kpi-total">—</div>
-      <div class="kpi-label">Total Fire Incidents</div>
-      <div class="kpi-sub" id="kpi-total-sub"></div>
+  <!-- ============================================================ -->
+  <!-- TAB: OVERVIEW -->
+  <!-- ============================================================ -->
+  <div class="tab-panel" data-tab="overview">
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label for="filter-year">Year</label>
+        <select id="filter-year">
+          <option value="all">All Years</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-type">Fire Type</label>
+        <select id="filter-type">
+          <option value="all">All Types</option>
+          <option value="structure">Structure</option>
+          <option value="outside">Outside</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-neighbourhood">Neighbourhood</label>
+        <input type="text" id="filter-neighbourhood" placeholder="Search neighbourhood...">
+      </div>
+      <div class="filter-group">
+        <label for="filter-station">Station</label>
+        <select id="filter-station">
+          <option value="all">All Stations</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-map-style">Map Style</label>
+        <select id="filter-map-style">
+          <option value="heatmap">Heatmap</option>
+          <option value="clusters">Clusters</option>
+          <option value="points">Individual Points</option>
+          <option value="hexbin">3D Hexbin</option>
+        </select>
+      </div>
+      <!-- Map Layer Toggles -->
+      <div class="filter-group">
+        <label>Map Layers</label>
+        <div class="toggle-group">
+          <label class="toggle-label">
+            <input type="checkbox" id="toggle-choropleth"> Choropleth
+          </label>
+          <label class="toggle-label">
+            <input type="checkbox" id="toggle-stations"> Stations
+          </label>
+          <label class="toggle-label">
+            <input type="checkbox" id="toggle-3d"> 3D
+          </label>
+        </div>
+      </div>
+      <div class="filter-group">
+        <button id="filter-reset" class="btn btn-reset">Reset</button>
+      </div>
     </div>
-    <div class="kpi-card skeleton">
-      <div class="kpi-value kpi-structure" id="kpi-structure">—</div>
-      <div class="kpi-label">Structure Fires</div>
-      <div class="kpi-sub" id="kpi-structure-sub"></div>
+
+    <!-- Active Filter Chips -->
+    <div id="filter-chips" class="filter-chips hidden"></div>
+
+    <!-- KPI Row -->
+    <div class="kpi-row">
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value" id="kpi-total">--</div>
+        <div class="kpi-label">Total Fire Incidents</div>
+        <div class="kpi-sub" id="kpi-total-sub"></div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-structure" id="kpi-structure">--</div>
+        <div class="kpi-label">Structure Fires</div>
+        <div class="kpi-sub" id="kpi-structure-sub"></div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-outside" id="kpi-outside">--</div>
+        <div class="kpi-label">Outside Fires</div>
+        <div class="kpi-sub" id="kpi-outside-sub"></div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-neighbourhood" id="kpi-neighbourhood">--</div>
+        <div class="kpi-label">Top Neighbourhood</div>
+        <div class="kpi-sub" id="kpi-neighbourhood-sub"></div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-response" id="kpi-response">--</div>
+        <div class="kpi-label">Avg Response Duration</div>
+        <div class="kpi-sub" id="kpi-response-sub"></div>
+      </div>
     </div>
-    <div class="kpi-card skeleton">
-      <div class="kpi-value kpi-outside" id="kpi-outside">—</div>
-      <div class="kpi-label">Outside Fires</div>
-      <div class="kpi-sub" id="kpi-outside-sub"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Left: Map -->
+      <div class="map-panel">
+        <div id="map" class="map-container"></div>
+        <div id="map-loading" class="map-loading-indicator">
+          <div class="map-spinner"></div>
+          <span>Loading map data...</span>
+        </div>
+        <div class="map-legend" id="map-legend">
+          <div class="legend-title">Fire Type</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#ff4444"></span> Structure</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#ff9933"></span> Outside</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#ffcc00"></span> Other</div>
+        </div>
+        <!-- Time Slider -->
+        <div class="time-slider-panel" id="time-slider-panel">
+          <div class="time-slider-header">
+            <span class="time-slider-label">Time Lapse</span>
+            <span class="time-slider-year" id="time-slider-year">All Years</span>
+          </div>
+          <div class="time-slider-controls">
+            <button class="btn btn-slider" id="time-play" title="Play/Pause">&#9654;</button>
+            <input type="range" id="time-slider" class="time-slider" min="0" max="100" value="0">
+            <button class="btn btn-slider" id="time-reset" title="Reset">&#8634;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Charts -->
+      <div class="charts-panel">
+        <div class="chart-card glass skeleton">
+          <h3>Fire Incidents by Year</h3>
+          <div class="chart-wrapper"><canvas id="chart-yearly"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton">
+          <h3>Monthly Distribution</h3>
+          <div class="chart-wrapper"><canvas id="chart-monthly"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton">
+          <h3>Fire Type Breakdown</h3>
+          <div class="chart-wrapper chart-wrapper-doughnut"><canvas id="chart-doughnut"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton">
+          <h3>Top 15 Neighbourhoods</h3>
+          <div class="table-wrapper" id="neighbourhood-table"></div>
+        </div>
+        <div class="chart-card glass skeleton" id="card-hourly">
+          <h3>Incidents by Hour of Day</h3>
+          <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-hourly"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton" id="card-dow">
+          <h3>Incidents by Day of Week</h3>
+          <div class="chart-wrapper"><canvas id="chart-dow"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton" id="card-trends">
+          <h3>Year-over-Year Monthly Trends</h3>
+          <div class="chart-wrapper"><canvas id="chart-trends"></canvas></div>
+        </div>
+      </div>
     </div>
-    <div class="kpi-card skeleton">
-      <div class="kpi-value kpi-neighbourhood" id="kpi-neighbourhood">—</div>
-      <div class="kpi-label">Top Neighbourhood</div>
-      <div class="kpi-sub" id="kpi-neighbourhood-sub"></div>
-    </div>
-    <div class="kpi-card skeleton">
-      <div class="kpi-value kpi-response" id="kpi-response">—</div>
-      <div class="kpi-label">Avg Response Duration</div>
-      <div class="kpi-sub" id="kpi-response-sub"></div>
+
+    <!-- Station Analytics Section (Overview) -->
+    <div class="station-section">
+      <h2 class="section-title">Calls by Fire Station</h2>
+      <p class="section-sub">Incidents assigned to nearest station via PostGIS proximity analysis (31 stations)</p>
+      <div class="station-grid">
+        <div class="chart-card glass skeleton" id="card-station-bar">
+          <h3>Incidents by Station</h3>
+          <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-station-bar"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton" id="card-station-type">
+          <h3>Fire Type Mix by Station</h3>
+          <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-station-type"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton" id="card-station-table">
+          <h3>Station Detail</h3>
+          <div class="table-wrapper" id="station-table"></div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Main Content -->
-  <div class="main-content">
-    <!-- Left: Map -->
-    <div class="map-panel">
-      <div id="map" class="map-container"></div>
-      <!-- Map loading indicator (shown while points load in background) -->
-      <div id="map-loading" class="map-loading-indicator">
-        <div class="map-spinner"></div>
-        <span>Loading map data...</span>
+  <!-- ============================================================ -->
+  <!-- TAB: STATIONS -->
+  <!-- ============================================================ -->
+  <div class="tab-panel hidden" data-tab="stations">
+    <div class="tab-header">
+      <div class="tab-header-left">
+        <h2 class="section-title">Station Comparison</h2>
+        <p class="section-sub">YTD performance with year-over-year comparison</p>
       </div>
-      <div class="map-legend" id="map-legend">
-        <div class="legend-title">Fire Type</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#ff4444"></span> Structure</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#ff9933"></span> Outside</div>
-        <div class="legend-item"><span class="legend-dot" style="background:#ffcc00"></span> Other</div>
-      </div>
-      <!-- Time Slider -->
-      <div class="time-slider-panel" id="time-slider-panel">
-        <div class="time-slider-header">
-          <span class="time-slider-label">Time Lapse</span>
-          <span class="time-slider-year" id="time-slider-year">All Years</span>
-        </div>
-        <div class="time-slider-controls">
-          <button class="btn btn-slider" id="time-play" title="Play/Pause">&#9654;</button>
-          <input type="range" id="time-slider" class="time-slider" min="0" max="100" value="0">
-          <button class="btn btn-slider" id="time-reset" title="Reset">&#8634;</button>
+      <div class="tab-header-right">
+        <div class="filter-group">
+          <label for="station-select">Station</label>
+          <select id="station-select">
+            <option value="04">Station 04</option>
+          </select>
         </div>
       </div>
     </div>
 
-    <!-- Right: Charts -->
-    <div class="charts-panel">
-      <div class="chart-card skeleton">
-        <h3>Fire Incidents by Year</h3>
-        <div class="chart-wrapper"><canvas id="chart-yearly"></canvas></div>
+    <!-- Station KPI Row -->
+    <div class="kpi-row kpi-row-6" id="station-kpi-row">
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value" id="stn-kpi-total">--</div>
+        <div class="kpi-label">Total Calls YTD</div>
+        <div class="kpi-sub" id="stn-kpi-total-sub"></div>
       </div>
-      <div class="chart-card skeleton">
-        <h3>Monthly Distribution</h3>
-        <div class="chart-wrapper"><canvas id="chart-monthly"></canvas></div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-structure" id="stn-kpi-structure">--</div>
+        <div class="kpi-label">Structure Fires</div>
+        <div class="kpi-sub" id="stn-kpi-structure-sub"></div>
       </div>
-      <div class="chart-card skeleton">
-        <h3>Fire Type Breakdown</h3>
-        <div class="chart-wrapper chart-wrapper-doughnut"><canvas id="chart-doughnut"></canvas></div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-outside" id="stn-kpi-outside">--</div>
+        <div class="kpi-label">Outside Fires</div>
+        <div class="kpi-sub" id="stn-kpi-outside-sub"></div>
       </div>
-      <div class="chart-card skeleton">
-        <h3>Top 15 Neighbourhoods</h3>
-        <div class="table-wrapper" id="neighbourhood-table"></div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-other" id="stn-kpi-alarms">--</div>
+        <div class="kpi-label">Alarms</div>
+        <div class="kpi-sub" id="stn-kpi-alarms-sub"></div>
       </div>
-      <div class="chart-card skeleton" id="card-hourly">
-        <h3>Incidents by Hour of Day</h3>
-        <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-hourly"></canvas></div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-response" id="stn-kpi-duration">--</div>
+        <div class="kpi-label">Avg Duration</div>
+        <div class="kpi-sub" id="stn-kpi-duration-sub"></div>
       </div>
-      <div class="chart-card skeleton" id="card-dow">
-        <h3>Incidents by Day of Week</h3>
-        <div class="chart-wrapper"><canvas id="chart-dow"></canvas></div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-rank" id="stn-kpi-rank">--</div>
+        <div class="kpi-label">City Rank</div>
+        <div class="kpi-sub" id="stn-kpi-rank-sub">of 31 stations</div>
       </div>
-      <div class="chart-card skeleton" id="card-trends">
-        <h3>Year-over-Year Monthly Trends</h3>
-        <div class="chart-wrapper"><canvas id="chart-trends"></canvas></div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-caution" id="stn-kpi-multi">--</div>
+        <div class="kpi-label">Multi-Unit %</div>
+        <div class="kpi-sub" id="stn-kpi-multi-sub">3+ unit types</div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-success" id="stn-kpi-short">--</div>
+        <div class="kpi-label">Short Calls (&lt;5min)</div>
+        <div class="kpi-sub" id="stn-kpi-short-sub">of total incidents</div>
+      </div>
+    </div>
+
+    <!-- Station Charts -->
+    <div class="station-compare-grid">
+      <div class="chart-card glass skeleton" id="card-stn-trend">
+        <h3>Monthly Trend <span class="chart-subtitle" id="stn-trend-subtitle">vs City Average</span></h3>
+        <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-stn-trend"></canvas></div>
+      </div>
+      <div class="chart-card glass skeleton" id="card-stn-type">
+        <h3>Fire Type Mix</h3>
+        <div class="chart-wrapper chart-wrapper-doughnut"><canvas id="chart-stn-type"></canvas></div>
+      </div>
+      <div class="chart-card glass skeleton" id="card-stn-equipment">
+        <h3>Equipment Profile</h3>
+        <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-stn-equipment"></canvas></div>
+      </div>
+      <div class="chart-card glass skeleton" id="card-stn-response">
+        <h3>Response Codes</h3>
+        <div class="chart-wrapper chart-wrapper-doughnut"><canvas id="chart-stn-response"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Enhanced Station Analytics -->
+    <div class="station-compare-grid">
+      <div class="chart-card glass skeleton" id="card-stn-yoy">
+        <h3>Year-over-Year Breakdown <span class="chart-subtitle">Stacked by type</span></h3>
+        <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-stn-yoy"></canvas></div>
+      </div>
+      <div class="chart-card glass skeleton" id="card-stn-duration">
+        <h3>Duration Distribution</h3>
+        <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-stn-duration"></canvas></div>
+      </div>
+      <div class="chart-card glass skeleton" id="card-stn-combos">
+        <h3>Top Equipment Combinations</h3>
+        <div class="table-wrapper" id="stn-equipment-combos"></div>
+        <div id="stn-duration-compare" style="padding: 12px 16px 0;"></div>
+      </div>
+    </div>
+
+    <!-- Station AI Analysis -->
+    <div class="chart-card glass" id="stn-ai-section">
+      <div class="stn-ai-header">
+        <div class="stn-ai-title">
+          <span class="ai-icon">&#9889;</span>
+          <span>AI Station Analyst</span>
+          <span class="stn-ai-badge" id="stn-ai-station-label">Station 04</span>
+        </div>
+      </div>
+      <div class="stn-ai-modes">
+        <button class="stn-ai-mode-btn ai-mode-btn" data-mode="stn-equipment">
+          <span class="ai-mode-icon">&#128295;</span>Equipment Analysis
+        </button>
+        <button class="stn-ai-mode-btn ai-mode-btn" data-mode="stn-performance">
+          <span class="ai-mode-icon">&#128202;</span>Performance Review
+        </button>
+        <button class="stn-ai-mode-btn ai-mode-btn" data-mode="stn-response">
+          <span class="ai-mode-icon">&#127919;</span>Response Patterns
+        </button>
+        <button class="stn-ai-mode-btn ai-mode-btn" data-mode="stn-query">
+          <span class="ai-mode-icon">&#128172;</span>Ask About Station
+        </button>
+      </div>
+      <div class="ai-query-row" style="padding: 0 20px 14px;">
+        <input type="text" id="stn-ai-query" class="ai-query-input" placeholder="Ask anything about this station...">
+        <button id="stn-ai-ask" class="btn btn-accent ai-ask-btn">Ask</button>
+      </div>
+      <div class="ai-response-area" id="stn-ai-response" style="max-height: 400px;">
+        <div class="ai-placeholder">
+          <p>Select an analysis mode or ask a question about this station's data.</p>
+          <p style="color:var(--text-muted);font-size:0.8rem;margin-top:6px;">Claude will analyze station-specific equipment, performance, and response patterns.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- All Stations Comparison Table -->
+    <div class="chart-card glass skeleton" id="card-stn-table">
+      <h3>All Stations — YTD Comparison</h3>
+      <div class="table-wrapper" id="station-compare-table"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- TAB: OPERATIONS -->
+  <!-- ============================================================ -->
+  <div class="tab-panel hidden" data-tab="operations">
+    <div class="tab-header">
+      <div class="tab-header-left">
+        <h2 class="section-title">Operational Analytics</h2>
+        <p class="section-sub">Equipment utilization, response duration analysis, and outcome codes</p>
+      </div>
+      <div class="tab-header-right">
+        <div class="filter-group">
+          <label for="ops-year">Year</label>
+          <select id="ops-year">
+            <option value="2025">2025</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Operations KPI Row -->
+    <div class="kpi-row kpi-row-5" id="ops-kpi-row">
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value" id="ops-kpi-median">--</div>
+        <div class="kpi-label">Median Duration</div>
+        <div class="kpi-sub" id="ops-kpi-median-sub">minutes</div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-caution" id="ops-kpi-p90">--</div>
+        <div class="kpi-label">90th Percentile</div>
+        <div class="kpi-sub" id="ops-kpi-p90-sub">minutes</div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-accent" id="ops-kpi-multi">--</div>
+        <div class="kpi-label">Multi-Unit Response</div>
+        <div class="kpi-sub" id="ops-kpi-multi-sub">3+ unit types</div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-false-alarm" id="ops-kpi-false">--</div>
+        <div class="kpi-label">No-Fire Rate</div>
+        <div class="kpi-sub" id="ops-kpi-false-sub">of alarms</div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value kpi-success" id="ops-kpi-short">--</div>
+        <div class="kpi-label">Short Calls (&lt;5min)</div>
+        <div class="kpi-sub" id="ops-kpi-short-sub">of total incidents</div>
+      </div>
+    </div>
+
+    <!-- Equipment Section -->
+    <div class="ops-section">
+      <h3 class="ops-section-title">Equipment Utilization</h3>
+      <div class="ops-grid-2">
+        <div class="chart-card glass skeleton">
+          <h3>Deployments by Unit Type</h3>
+          <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-equipment-type"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton">
+          <h3>Avg Units per Incident by Fire Type</h3>
+          <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-avg-units"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-card glass skeleton">
+        <h3>Top Equipment Combinations</h3>
+        <div class="table-wrapper" id="equipment-combos-table"></div>
+      </div>
+    </div>
+
+    <!-- Duration Section -->
+    <div class="ops-section">
+      <h3 class="ops-section-title">Response Duration Analysis</h3>
+      <div class="ops-grid-2">
+        <div class="chart-card glass skeleton">
+          <h3>Duration Distribution</h3>
+          <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-duration-hist"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton">
+          <h3>Duration Trend by Year</h3>
+          <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-duration-trend"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-card glass skeleton">
+        <h3>Long-Duration Incidents (60+ min)</h3>
+        <div class="table-wrapper table-wrapper-tall" id="outlier-table"></div>
+      </div>
+    </div>
+
+    <!-- Response Codes Section -->
+    <div class="ops-section">
+      <h3 class="ops-section-title">Response Outcome Codes</h3>
+      <div class="ops-grid-2">
+        <div class="chart-card glass skeleton">
+          <h3>Response Code Breakdown</h3>
+          <div class="chart-wrapper chart-wrapper-doughnut"><canvas id="chart-response-codes"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton">
+          <h3>No-Fire (False Alarm) Rate by Year</h3>
+          <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-false-alarm"></canvas></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Station Analytics Section -->
-  <div class="station-section">
-    <h2 class="section-title">Calls by Fire Station</h2>
-    <p class="section-sub">Incidents assigned to nearest station via PostGIS proximity analysis (31 stations)</p>
-    <div class="station-grid">
-      <div class="chart-card skeleton" id="card-station-bar">
-        <h3>Incidents by Station</h3>
-        <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-station-bar"></canvas></div>
+  <!-- ============================================================ -->
+  <!-- TAB: TRENDS -->
+  <!-- ============================================================ -->
+  <div class="tab-panel hidden" data-tab="trends">
+    <div class="tab-header">
+      <div class="tab-header-left">
+        <h2 class="section-title">Trends & Forecasting</h2>
+        <p class="section-sub">YTD pace tracking, seasonal patterns, and long-term growth analysis</p>
       </div>
-      <div class="chart-card skeleton" id="card-station-type">
-        <h3>Fire Type Mix by Station</h3>
-        <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-station-type"></canvas></div>
+    </div>
+
+    <!-- YTD Section -->
+    <div class="ops-section">
+      <h3 class="ops-section-title">Year-to-Date Pace</h3>
+      <div class="kpi-row kpi-row-4" id="ytd-kpi-row">
+        <div class="kpi-card glass skeleton">
+          <div class="kpi-value" id="ytd-kpi-total">--</div>
+          <div class="kpi-label">Total YTD</div>
+          <div class="kpi-sub" id="ytd-kpi-total-sub"></div>
+        </div>
+        <div class="kpi-card glass skeleton">
+          <div class="kpi-value kpi-structure" id="ytd-kpi-structure">--</div>
+          <div class="kpi-label">Structure YTD</div>
+          <div class="kpi-sub" id="ytd-kpi-structure-sub"></div>
+        </div>
+        <div class="kpi-card glass skeleton">
+          <div class="kpi-value kpi-outside" id="ytd-kpi-outside">--</div>
+          <div class="kpi-label">Outside YTD</div>
+          <div class="kpi-sub" id="ytd-kpi-outside-sub"></div>
+        </div>
+        <div class="kpi-card glass skeleton">
+          <div class="kpi-value kpi-other" id="ytd-kpi-alarms">--</div>
+          <div class="kpi-label">Alarms YTD</div>
+          <div class="kpi-sub" id="ytd-kpi-alarms-sub"></div>
+        </div>
       </div>
-      <div class="chart-card skeleton" id="card-station-table">
-        <h3>Station Detail</h3>
-        <div class="table-wrapper" id="station-table"></div>
+      <div class="chart-card glass skeleton">
+        <h3>Monthly Comparison — Last 3 Years</h3>
+        <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-ytd-pace"></canvas></div>
+      </div>
+      <div class="chart-card glass skeleton">
+        <h3>Monthly Totals Comparison</h3>
+        <div class="table-wrapper" id="ytd-monthly-table"></div>
+      </div>
+    </div>
+
+    <!-- Seasonal Section -->
+    <div class="ops-section">
+      <h3 class="ops-section-title">Seasonal Patterns</h3>
+      <div class="ops-grid-2">
+        <div class="chart-card glass skeleton">
+          <h3>Seasonal Index by Fire Type</h3>
+          <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-seasonal"></canvas></div>
+        </div>
+        <div class="chart-card glass skeleton">
+          <h3>Outside Fire Seasonality</h3>
+          <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-outside-seasonal"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Growth Section -->
+    <div class="ops-section">
+      <h3 class="ops-section-title">Long-Term Growth</h3>
+      <div class="chart-card glass skeleton">
+        <h3>Incident Growth Trajectory</h3>
+        <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-growth"></canvas></div>
+      </div>
+      <div class="chart-card glass skeleton">
+        <h3>Growth Rate by Incident Type</h3>
+        <div class="table-wrapper" id="growth-rate-table"></div>
       </div>
     </div>
   </div>
@@ -257,6 +603,9 @@
   <div id="deck-tooltip" style="display:none;position:fixed;z-index:10;pointer-events:none;
     background:rgba(15,25,35,0.92);color:#e0e6ed;padding:6px 10px;border-radius:4px;
     font-size:12px;border:1px solid #2a3a4a;backdrop-filter:blur(4px);"></div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast hidden"></div>
 
   <!-- JS Modules -->
   <script type="module" src="js/app.js"></script>

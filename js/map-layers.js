@@ -97,7 +97,6 @@ async function fetchNeighbourhoods() {
         if (!f.properties.fireCount) f.properties.fireCount = 0;
       });
     }
-    console.log(`Neighbourhood boundaries loaded: ${geojson.features.length} polygons`);
     return geojson;
   } catch (err) {
     console.warn('Failed to load neighbourhood boundaries:', err.message);
@@ -110,7 +109,6 @@ async function fetchStations() {
     const res = await fetch(FIRE_STATION_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    console.log(`Fire stations loaded: ${data.length} stations`);
     return data;
   } catch (err) {
     console.warn('Failed to load fire station data:', err.message);

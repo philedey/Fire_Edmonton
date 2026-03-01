@@ -5,14 +5,14 @@ import { initFilters, populateYears, populateNeighbourhoods, populateStations, s
 import { getCachedMapData, setCachedMapData, isCacheStale } from './cache.js';
 import { initExtraCharts, updateExtraChartsFromData, renderSparkline } from './charts-extra.js';
 import { initStationCharts, updateStationCharts } from './charts-station.js';
-import { ANALYSIS_MODES, streamAnalysis, buildPrompt, getSystemPrompt } from './ai.js';
+import { streamAnalysis, buildPrompt, getSystemPrompt } from './ai.js';
 import { escapeHtml, renderMarkdown } from './chart-utils.js';
 import {
   initMapLayers, toggleChoropleth, updateChoroplethCounts,
   toggleStations, toggle3D, update3DCounts,
   setTimeFilter, animateTimeLapse, stopTimeLapse,
 } from './map-layers.js';
-import { initTabs, navigateToTab } from './tabs.js';
+import { initTabs } from './tabs.js';
 import { initStationCompare } from './station-compare.js';
 import { initOperations } from './operations.js';
 import { initTrends } from './trends.js';
@@ -96,19 +96,16 @@ async function main() {
       if (stats.neighbourhoodRanking) {
         updateChoroplethCounts(stats.neighbourhoodRanking);
       }
-      console.log('Map layers initialized');
     }).catch(err => console.warn('Map layers init failed:', err));
 
     fetchStationList().then(names => {
       populateStations(names);
-      console.log(`Station filter populated: ${names.length} stations`);
     }).catch(err => console.warn('Station list load failed:', err));
 
     fetchStationData().then(stationData => {
       currentStationData = stationData;
       updateStationCharts(stationData);
       document.querySelectorAll('.station-section .skeleton').forEach(el => el.classList.remove('skeleton'));
-      console.log('Station analytics loaded');
     }).catch(err => console.warn('Station data load failed:', err));
 
     // Wire AI panel
@@ -129,13 +126,11 @@ async function main() {
 
     const cached = await getCachedMapData();
     if (cached && !isCacheStale(cached.lastFetched)) {
-      console.log(`Using cached map data: ${cached.featureCount} features`);
       applyMapData(cached.geojson, stats, cached.lastFetched);
       mapLoading.classList.add('hidden');
       refreshMapInBackground(stats);
     } else {
       if (cached) {
-        console.log(`Stale cache, showing old data while refreshing...`);
         applyMapData(cached.geojson, stats, cached.lastFetched);
       }
 
@@ -171,7 +166,6 @@ async function refreshMapInBackground(stats) {
   try {
     const geojson = await fetchMapPoints(() => {});
     if (mapGeojson && Math.abs(geojson.features.length - mapGeojson.features.length) > mapGeojson.features.length * 0.01) {
-      console.log(`Background refresh: ${mapGeojson.features.length} → ${geojson.features.length} features`);
       applyMapData(geojson, stats, null);
     }
     setCachedMapData(geojson).catch(err => console.warn('Cache write failed:', err));

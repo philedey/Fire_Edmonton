@@ -407,3 +407,73 @@ Fire_Edmonton/
 - After every 3 completed features, pause and run a refactor pass
 - At end of session, update this file with structural changes
 - Start each session by reading this file and confirming understanding
+
+## Session 5 (Feb 28, 2026)
+
+### What Was Built
+
+**Tab system + Operations tab:**
+- `tabs.js` — tab navigation with lazy-load callbacks, 6 tabs: overview, stations, operations, trends, insights, scorecard
+- `operations.js` — equipment analytics (avg units, combinations, utilization doughnut), duration analysis (histogram, trend chart with median/p90), response code doughnut, outlier table
+- `station-compare.js` — full station detail tab with KPIs, monthly trend chart, equipment profile, duration comparison bar, AI-powered analysis modes
+- New Supabase RPCs: `operational_kpis(p_year)`, `station_comparison(p_station)`, `equipment_analytics(p_year, p_station)`, `station_duration_buckets(p_station)`
+- New materialized views: `mv_equipment_breakdown`, `mv_response_codes`, `mv_duration_distribution`, `mv_ytd_comparison`
+
+**AI integration (Claude API):**
+- `ai.js` — 4 analysis modes (risk, anomaly, resource, forecast) + natural language query
+- `server.js` — Express proxy for Anthropic API (port 3001)
+- Station-specific AI analysis: performance review, response patterns, resource optimization, free-form Q&A
+- Streaming token-by-token response with markdown rendering
+
+**Trends tab:**
+- `trends.js` — YTD KPIs (total, structure, outside, alarms, duration) with YoY delta badges
+- Monthly comparison chart (current year vs prior 2 years)
+- YTD pace table
+
+**Insights tab:**
+- `insights.js` — resource allocation analytics
+- Station workload scoring: median-based %, categorized as Overloaded (>150%), High (>125%), Balanced, Low (<75%)
+- Workload imbalance bar chart + detail table
+- Seasonal demand analysis (peak/trough identification)
+- Risk scoring by neighbourhood
+- Prevention priority identification
+
+## Session 6 (Mar 1, 2026)
+
+### What Was Built
+
+**Scorecard tab:**
+- `scorecard.js` — side-by-side station comparison with 8 metrics (total calls, structure, outside, alarms, duration, rank, alarm ratio, workload score)
+- Winner highlighting (green = better side, muted = worse side)
+- Radar chart overlay (Chart.js) with normalized metrics
+- Saved comparisons in localStorage (key: `fire_scorecard_saved`, max 20 entries)
+
+**Neighbourhood dropdown:**
+- Converted neighbourhood filter from free-text `<input>` to searchable `<select>` dropdown
+- Populated dynamically from `neighbourhoodRanking` data
+- Changed event from debounced `input` to immediate `change`
+
+**Duration metric fix (critical):**
+- Discovered `event_duration_mins` is total event time (dispatch→close), NOT response time (dispatch→arrival)
+- Station 04's mean (28.3 min) inflated by single 31.6-hour outlier; median (10.8 min) is representative
+- Added `median_duration` to 4 materialized views: `mv_station_ytd`, `mv_ytd_comparison`, `mv_station_calls`
+- Updated 3 RPC functions: `dashboard_data`, `station_comparison`, `operational_kpis`
+- `dashboard_data` now returns both `avgDuration` and `medianDuration`
+- Relabelled all "Response Time"/"Response Duration" → "Median Event Duration" with "dispatch to close" subtitle
+- All 17 JS files + index.html updated to use `median_duration` as primary with `avg_duration` fallback
+
+**Refactor passes:**
+1. Deduplicated `renderMarkdown` (was in app.js + station-compare.js → chart-utils.js)
+2. Deduplicated `MONTH_NAMES` (was in 3 files → `MONTH_LABELS` in chart-utils.js)
+3. Consolidated doughnut chart options (was repeated 4x → `DOUGHNUT_DEFAULTS` in chart-utils.js)
+4. Removed all `console.log` debug statements from production code (app.js, map-layers.js, operations.js, api.js)
+5. Removed unused imports (`navigateToTab` from map.js, `ANALYSIS_MODES` from app.js)
+6. Replaced local `escapeForHtml` with shared `escapeHtml`
+
+### Supabase Migrations Applied
+- `add_median_duration_to_station_ytd` — recreated mv_station_ytd with PERCENTILE_CONT(0.5)
+- `add_median_to_station_comparison_rpc` — updated station_comparison to expose median_duration
+- `add_median_to_dashboard_data_rpc` — updated dashboard_data to return medianDuration
+- `add_median_to_ytd_comparison` — recreated mv_ytd_comparison with median_duration
+- `update_operational_kpis_ytd_median` — updated operational_kpis ytdComparison with median_duration
+- `add_median_to_station_calls` — recreated mv_station_calls with median_duration_mins

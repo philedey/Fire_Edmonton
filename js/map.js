@@ -1,5 +1,3 @@
-import { navigateToTab } from './tabs.js';
-
 const MAPBOX_TOKEN = 'pk.eyJ1IjoicGhpbGVkZXkiLCJhIjoiY21mcTB2OTJ4MGx0cjJrcHlvNDFtcWxuZiJ9.PlD_NmzV2pPlYoi6u41T3Q';
 const EDMONTON_CENTER = [-113.4938, 53.5461];
 const INITIAL_ZOOM = 10.5;

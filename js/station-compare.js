@@ -8,8 +8,10 @@ import {
 import {
   streamAnalysis, buildStationPrompt, getStationSystemPrompt,
 } from './ai.js';
-import { getStationResource, getApparatusCount, getSpecialty, getStatusLabel, getStatusColor } from './station-resources.js';
-import { computeStationResponseMetrics, setStationCoords } from './response-time.js';
+import { getStationResource, getApparatusCount, getSpecialty, getStatusLabel } from './station-resources.js';
+import { computeStationResponseMetrics, getStationCoords, computeRadiusAnalysis } from './response-time.js';
+import { showRadiusRings, hideRadiusRings } from './map-layers.js';
+import { navigateToTab } from './tabs.js';
 import { EFRS_BENCHMARKS } from './efrs-benchmarks.js';
 
 let trendChart = null;
@@ -19,6 +21,7 @@ let responseChart = null;
 let yoyChart = null;
 let durationHistChart = null;
 let travelChart = null;
+let radiusChart = null;
 let currentStation = '04';
 let currentStationData = null;
 let currentEquipData = null;
@@ -49,6 +52,7 @@ async function populateStationDropdown() {
 function wireStationSelector() {
   const select = document.getElementById('station-select');
   select.addEventListener('change', () => {
+    hideRadiusRings(); // Clear any visible radius rings from previous station
     currentStation = select.value;
     loadStation(currentStation);
   });
@@ -88,6 +92,7 @@ async function loadStation(station) {
     renderCapacityKPIs(station, data);
     renderResponseTimeKPIs(station);
     renderTravelTimeChart(station);
+    renderRadiusAnalysis(station);
     updateStationAIPanel(station);
 
     removeSkeleton('stations');
@@ -372,7 +377,7 @@ function renderMultiUnitKPI(equipData) {
 function renderShortDurationKPI(durData) {
   const el = document.getElementById('stn-kpi-short');
   const sub = document.getElementById('stn-kpi-short-sub');
-  if (!el || !durData) return;
+  if (!el || !durData?.buckets) return;
 
   const shortCnt = durData.buckets['0-5'] || 0;
   const total = durData.total || 0;
@@ -573,13 +578,15 @@ function renderStationProfile(station, data) {
   // Name + status badge
   const nameEl = document.getElementById('stn-profile-name');
   const badgeEl = document.getElementById('stn-status-badge');
-  nameEl.textContent = `Station ${station} — ${res.name}`;
+  if (nameEl) nameEl.textContent = `Station ${station} — ${res.name}`;
 
   const statusLabel = getStatusLabel(res.status);
   const statusCls = res.status === 'active' ? 'stn-status-active'
     : res.status === 'closed_renovation' ? 'stn-status-closed' : 'stn-status-construction';
-  badgeEl.textContent = statusLabel;
-  badgeEl.className = `stn-status-badge ${statusCls}`;
+  if (badgeEl) {
+    badgeEl.textContent = statusLabel;
+    badgeEl.className = `stn-status-badge ${statusCls}`;
+  }
 
   const specialty = getSpecialty(res);
 
@@ -587,7 +594,7 @@ function renderStationProfile(station, data) {
   const metaEl = document.getElementById('stn-profile-meta');
   let metaHtml = `${res.district} District | ${res.address}`;
   if (specialty) metaHtml += ` | <span class="stn-specialty-badge">${specialty}</span>`;
-  metaEl.innerHTML = metaHtml;
+  if (metaEl) metaEl.innerHTML = metaHtml;
 
   // Apparatus tags
   const apparatusEl = document.getElementById('stn-apparatus-list');
@@ -599,10 +606,11 @@ function renderStationProfile(station, data) {
   for (const c of res.chief_units) tags.push(`<span class="stn-apparatus-tag tag-chief">${escapeHtml(c)}</span>`);
 
   if (!tags.length) tags.push('<span class="stn-apparatus-tag" style="font-style:italic">No apparatus assigned</span>');
-  apparatusEl.innerHTML = tags.join('');
+  if (apparatusEl) apparatusEl.innerHTML = tags.join('');
 
   // Stats column
   const statsEl = document.getElementById('stn-profile-stats');
+  if (!statsEl) return;
   const apparatusCount = getApparatusCount(res);
   const notes = res.notes || '';
   statsEl.innerHTML = `
@@ -677,10 +685,14 @@ function renderTravelTimeChart(station) {
   const ctx = document.getElementById('chart-stn-travel');
   if (!ctx) return;
 
-  if (!_mapGeojson) return;
+  if (!_mapGeojson) {
+    if (travelChart) { travelChart.destroy(); travelChart = null; }
+    return;
+  }
 
   const metrics = computeStationResponseMetrics(station, _mapGeojson);
   if (!metrics) {
+    if (travelChart) { travelChart.destroy(); travelChart = null; }
     const card = document.getElementById('card-stn-travel');
     if (card) card.style.display = 'none';
     return;
@@ -810,5 +822,182 @@ function runStationAnalysis(modeId, userQuery, responseArea) {
       }
     }
   );
+}
+
+// --- Radius Coverage Analysis ---
+
+function renderRadiusAnalysis(station) {
+  const card = document.getElementById('card-stn-radius');
+  if (!card) return;
+
+  if (!_mapGeojson) {
+    if (radiusChart) { radiusChart.destroy(); radiusChart = null; }
+    card.style.display = 'none';
+    return;
+  }
+
+  const analysis = computeRadiusAnalysis(station, _mapGeojson);
+  if (!analysis) {
+    if (radiusChart) { radiusChart.destroy(); radiusChart = null; }
+    card.style.display = 'none';
+    return;
+  }
+
+  card.style.display = '';
+  card.classList.remove('skeleton');
+
+  renderRadiusKPIs(analysis);
+  renderRadiusChart(analysis);
+  renderRadiusTable(analysis);
+  wireRadiusMapButton(station, analysis);
+}
+
+function renderRadiusKPIs(analysis) {
+  const container = document.getElementById('stn-radius-kpis');
+  if (!container) return;
+
+  const lastRing = analysis.rings.length ? analysis.rings[analysis.rings.length - 1] : null;
+  const withinMaxCount = lastRing ? lastRing.count.toLocaleString() : '--';
+  const maxRadiusLabel = lastRing ? `${lastRing.radiusKm} km` : '8 km';
+
+  container.innerHTML = `
+    <div class="kpi-card glass" style="flex:1">
+      <div class="kpi-value" style="color:#ff6b35">${analysis.coverageScore}%</div>
+      <div class="kpi-label">Coverage Score</div>
+      <div class="kpi-sub">within 4.2 km (7-min target)</div>
+    </div>
+    <div class="kpi-card glass" style="flex:1">
+      <div class="kpi-value">${withinMaxCount}</div>
+      <div class="kpi-label">Calls within ${maxRadiusLabel}</div>
+      <div class="kpi-sub">of ${analysis.totalAssigned.toLocaleString()} total assigned</div>
+    </div>
+    <div class="kpi-card glass" style="flex:1">
+      <div class="kpi-value">${analysis.avgDistance} km</div>
+      <div class="kpi-label">Avg Distance</div>
+      <div class="kpi-sub">straight-line to incident</div>
+    </div>
+  `;
+}
+
+function renderRadiusChart(analysis) {
+  const ctx = document.getElementById('chart-stn-radius');
+  if (!ctx) return;
+
+  const bands = analysis.bands;
+  const labels = bands.map(b => b.label);
+  const counts = bands.map(b => b.count);
+  const colors = bands.map(b => b.color);
+  const densities = bands.map(b => b.density);
+
+  if (radiusChart) radiusChart.destroy();
+  radiusChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Incidents',
+          data: counts,
+          backgroundColor: colors.map(c => c + 'CC'),
+          borderColor: colors,
+          borderWidth: 1,
+          borderRadius: 3,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Density (calls/km²)',
+          data: densities,
+          type: 'line',
+          borderColor: '#e0e6ed',
+          backgroundColor: 'rgba(224, 230, 237, 0.1)',
+          fill: false,
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: colors,
+          borderWidth: 2,
+          yAxisID: 'y1',
+        },
+      ],
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      plugins: {
+        ...CHART_DEFAULTS.plugins,
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            afterBody: (items) => {
+              const idx = items[0]?.dataIndex;
+              if (idx != null && bands[idx]) {
+                return `Cumulative: ${bands[idx].cumulativePct}%`;
+              }
+            },
+          },
+        },
+      },
+      scales: {
+        x: { ...CHART_DEFAULTS.scales.x },
+        y: {
+          ...CHART_DEFAULTS.scales.y,
+          beginAtZero: true,
+          position: 'left',
+          title: { display: true, text: 'Incident Count', color: '#7a8a9a' },
+        },
+        y1: {
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { color: '#e0e6ed', font: { size: 10 } },
+          title: { display: true, text: 'Density (calls/km²)', color: '#e0e6ed' },
+          beginAtZero: true,
+        },
+      },
+    },
+  });
+}
+
+function renderRadiusTable(analysis) {
+  const container = document.getElementById('stn-radius-table');
+  if (!container) return;
+
+  const bands = analysis.bands;
+  let html = `
+    <table class="ops-table">
+      <thead>
+        <tr><th>Band</th><th>Count</th><th>Area (km²)</th><th>Density</th><th>Cumulative %</th></tr>
+      </thead>
+      <tbody>
+  `;
+
+  for (const band of bands) {
+    const areaStr = band.bandArea != null ? band.bandArea.toFixed(1) : '--';
+    const densityStr = band.density != null ? band.density.toFixed(1) : '--';
+    html += `<tr>
+      <td><span class="ring-band-dot" style="background:${band.color}"></span> ${band.label}</td>
+      <td>${band.count.toLocaleString()}</td>
+      <td>${areaStr}</td>
+      <td>${densityStr}</td>
+      <td>${band.cumulativePct}%</td>
+    </tr>`;
+  }
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function wireRadiusMapButton(station, analysis) {
+  const btn = document.getElementById('stn-radius-map-btn');
+  if (!btn) return;
+
+  // Clone to remove old listeners
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+
+  newBtn.addEventListener('click', () => {
+    const coords = getStationCoords(station);
+    if (!coords) return;
+    showRadiusRings(station, coords.lat, coords.lng, analysis);
+    navigateToTab('overview');
+  });
 }
 

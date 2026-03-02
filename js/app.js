@@ -11,6 +11,7 @@ import {
   initMapLayers, toggleChoropleth, updateChoroplethCounts,
   toggleStations, toggle3D, update3DCounts,
   setTimeFilter, animateTimeLapse, stopTimeLapse,
+  hideRadiusRings,
 } from './map-layers.js';
 import { initTabs } from './tabs.js';
 import { initStationCompare, setMapGeojsonForStations } from './station-compare.js';
@@ -371,6 +372,7 @@ function wireTimeSlider(years) {
 function startAnimation(years, slider, yearLabel) {
   isTimePlaying = true;
   document.getElementById('time-play').textContent = '⏸';
+  hideRadiusRings(); // Clear radius rings during time-lapse
 
   animateTimeLapse(years, mapGeojson, (year) => {
     const idx = years.indexOf(year);

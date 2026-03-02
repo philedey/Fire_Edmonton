@@ -6,7 +6,7 @@ import {
   escapeHtml, formatNum, removeSkeleton, MONTH_LABELS,
 } from './chart-utils.js';
 import { EFRS_BENCHMARKS } from './efrs-benchmarks.js';
-import { getStationResource, getApparatusCount, getSpecialty } from './station-resources.js';
+import { getStationResource, getSpecialty } from './station-resources.js';
 
 let workloadChart = null;
 let alarmChart = null;

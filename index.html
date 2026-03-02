@@ -393,6 +393,18 @@
       </div>
     </div>
 
+    <!-- Radius Coverage Analysis -->
+    <div class="chart-card glass skeleton" id="card-stn-radius">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="margin:0">Distance Coverage Analysis</h3>
+        <button class="btn btn-sm" id="stn-radius-map-btn" title="Show rings on map">Show on Map</button>
+      </div>
+      <div class="kpi-row" style="margin:12px 0" id="stn-radius-kpis"></div>
+      <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-stn-radius"></canvas></div>
+      <div class="table-wrapper" id="stn-radius-table"></div>
+      <p class="chart-disclaimer">Distances are straight-line (haversine). Estimated travel time uses ×1.4 road factor at 50 km/h.</p>
+    </div>
+
     <!-- Station AI Analysis -->
     <div class="chart-card glass" id="stn-ai-section">
       <div class="stn-ai-header">

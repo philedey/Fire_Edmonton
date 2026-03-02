@@ -12,11 +12,18 @@
 
 import { navigateToTab } from './tabs.js';
 import { getStationResource, getApparatusCount, getSpecialty, getStatusLabel, getStatusColor } from './station-resources.js';
+import { EARTH_RADIUS_KM, DEG_TO_RAD } from './response-time.js';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const NEIGHBOURHOOD_URL = 'https://data.edmonton.ca/resource/65fr-66s6.geojson';
 const FIRE_STATION_URL = 'https://data.edmonton.ca/resource/b4y7-zhnz.json';
+
+const CIRCLE_SEGMENTS = 64;          // Polygon vertices for circle approximation
+const KM_PER_DEG_LAT = 111.32;       // Approximate km per degree of latitude
+const INACTIVE_MARKER_OPACITY = 0.6;
+const MARKER_SIZE_PX = 28;
+const POPUP_LINK_BIND_DELAY_MS = 50;  // Timeout for popup DOM readiness
 
 const CHOROPLETH_SOURCE = 'neighbourhoods';
 const CHOROPLETH_FILL = 'neighbourhood-fill';
@@ -256,63 +263,98 @@ export function updateChoroplethCounts(neighbourhoodRanking) {
 
 // ─── 2. Fire Station Markers ─────────────────────────────────────────────────
 
+/**
+ * Resolve lat/lng from a station data object, trying multiple field formats.
+ * Returns null if no valid coordinates are found.
+ * @param {Object} station - Raw station record from the API
+ * @returns {{ lat: number, lng: number } | null}
+ */
+function resolveStationCoords(station) {
+  let lat = parseFloat(station.latitude);
+  let lng = parseFloat(station.longitude);
+
+  // Fallback: nested location object
+  if ((isNaN(lat) || isNaN(lng)) && station.location) {
+    lat = parseFloat(station.location.latitude);
+    lng = parseFloat(station.location.longitude);
+  }
+
+  // Fallback: geometry_point
+  if ((isNaN(lat) || isNaN(lng)) && station.geometry_point) {
+    const coords = station.geometry_point.coordinates;
+    if (coords) {
+      lng = parseFloat(coords[0]);
+      lat = parseFloat(coords[1]);
+    }
+  }
+
+  return (isNaN(lat) || isNaN(lng)) ? null : { lat, lng };
+}
+
+/**
+ * Build popup HTML content for a station marker.
+ * @param {string} stationName
+ * @param {string} address
+ * @param {Object|null} resource - From getStationResource()
+ * @param {boolean} isActive
+ * @returns {string} HTML string
+ */
+function buildStationPopupHtml(stationName, address, resource, isActive) {
+  const rows = [`<div class="popup-title">Station ${stationName}</div>`];
+
+  if (resource?.name) {
+    rows.push(`<div class="popup-row" style="font-size:10px;color:#7a8a9a;margin-top:-2px">${resource.name}</div>`);
+  }
+
+  if (!isActive && resource) {
+    const statusLabel = getStatusLabel(resource.status);
+    const statusColor = getStatusColor(resource.status);
+    rows.push(`<div class="popup-row"><span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;background:${statusColor};color:#fff">${statusLabel}</span></div>`);
+  }
+
+  if (address) {
+    rows.push(`<div class="popup-row"><span class="popup-label">Address:</span><span>${address}</span></div>`);
+  }
+
+  const apparatusCount = resource ? getApparatusCount(resource) : 0;
+  if (apparatusCount > 0) {
+    rows.push(`<div class="popup-row"><span class="popup-label">Apparatus:</span><span>${apparatusCount} units</span></div>`);
+  }
+
+  if (resource?.total_min_staff) {
+    rows.push(`<div class="popup-row"><span class="popup-label">Min Staff:</span><span>${resource.total_min_staff}</span></div>`);
+  }
+
+  const specialty = resource ? getSpecialty(resource) : null;
+  if (specialty) {
+    rows.push(`<div class="popup-row"><span class="popup-label">Specialty:</span><span>${specialty}</span></div>`);
+  }
+
+  rows.push(`<div class="popup-row" style="margin-top:6px"><a href="#stations" class="station-link" data-station="${stationName}" style="color:var(--accent);font-size:11px;cursor:pointer">View Station Details &rarr;</a></div>`);
+
+  return rows.join('');
+}
+
 function createStationMarkers(stations) {
   for (const station of stations) {
-    // Resolve lat/lng from whichever fields are present
-    let lat = parseFloat(station.latitude);
-    let lng = parseFloat(station.longitude);
+    const coords = resolveStationCoords(station);
+    if (!coords) continue;
 
-    // Fallback: nested location object
-    if ((isNaN(lat) || isNaN(lng)) && station.location) {
-      lat = parseFloat(station.location.latitude);
-      lng = parseFloat(station.location.longitude);
-    }
-
-    // Fallback: geometry_point
-    if ((isNaN(lat) || isNaN(lng)) && station.geometry_point) {
-      const coords = station.geometry_point.coordinates;
-      if (coords) {
-        lng = parseFloat(coords[0]);
-        lat = parseFloat(coords[1]);
-      }
-    }
-
-    if (isNaN(lat) || isNaN(lng)) continue;
-
-    // Resolve name
     const stationName = station.station_name || station.name || 'Station';
     const address = station.address || station.street_address || '';
-
-    // Lookup resource data for enriched popup
     const resource = getStationResource(stationName);
     const isActive = !resource || resource.status === 'active';
-    const statusLabel = resource ? getStatusLabel(resource.status) : '';
-    const statusColor = resource ? getStatusColor(resource.status) : '';
-    const specialty = resource ? getSpecialty(resource) : '';
-    const apparatusCount = resource ? getApparatusCount(resource) : 0;
 
     // Create custom SVG marker element
     const el = document.createElement('div');
     el.className = 'fire-station-marker';
-    el.style.cssText = 'width:28px;height:28px;cursor:pointer;';
+    el.style.cssText = `width:${MARKER_SIZE_PX}px;height:${MARKER_SIZE_PX}px;cursor:pointer;`;
     el.innerHTML = isActive ? createStationSVG() : createStationSVG('#7a8a9a');
     el.title = `Station ${stationName}`;
-    if (!isActive) el.style.opacity = '0.6';
+    if (!isActive) el.style.opacity = String(INACTIVE_MARKER_OPACITY);
 
-    // Build enriched popup
-    let popupHtml = `<div class="popup-title">Station ${stationName}</div>`;
-    if (resource && resource.name) {
-      popupHtml += `<div class="popup-row" style="font-size:10px;color:#7a8a9a;margin-top:-2px">${resource.name}</div>`;
-    }
-    if (statusLabel && !isActive) {
-      popupHtml += `<div class="popup-row"><span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;background:${statusColor};color:#fff">${statusLabel}</span></div>`;
-    }
-    if (address) popupHtml += `<div class="popup-row"><span class="popup-label">Address:</span><span>${address}</span></div>`;
-    if (apparatusCount > 0) popupHtml += `<div class="popup-row"><span class="popup-label">Apparatus:</span><span>${apparatusCount} units</span></div>`;
-    if (resource && resource.total_min_staff) popupHtml += `<div class="popup-row"><span class="popup-label">Min Staff:</span><span>${resource.total_min_staff}</span></div>`;
-    if (specialty) popupHtml += `<div class="popup-row"><span class="popup-label">Specialty:</span><span>${specialty}</span></div>`;
-    popupHtml += `<div class="popup-row" style="margin-top:6px"><a href="#stations" class="station-link" data-station="${stationName}" style="color:var(--accent);font-size:11px;cursor:pointer">View Station Details &rarr;</a></div>`;
-
+    // Build popup
+    const popupHtml = buildStationPopupHtml(stationName, address, resource, isActive);
     const popupEl = new mapboxgl.Popup({ offset: 18, closeButton: true, closeOnClick: true })
       .setHTML(popupHtml);
 
@@ -328,11 +370,11 @@ function createStationMarkers(stations) {
             popupEl.remove();
           });
         }
-      }, 50);
+      }, POPUP_LINK_BIND_DELAY_MS);
     });
 
     const marker = new mapboxgl.Marker({ element: el })
-      .setLngLat([lng, lat])
+      .setLngLat([coords.lng, coords.lat])
       .setPopup(popupEl)
       .addTo(_map);
 
@@ -489,4 +531,199 @@ export function stopTimeLapse() {
     clearTimeout(_animationTimer);
     _animationTimer = null;
   }
+}
+
+// ─── 5. Station Radius Rings ─────────────────────────────────────────────────
+
+const RADIUS_RING_SOURCE = 'radius-rings';
+const RADIUS_RING_FILL = 'radius-rings-fill';
+const RADIUS_RING_OUTLINE = 'radius-rings-outline';
+const RADIUS_RING_LABELS = 'radius-rings-labels';
+const RADIUS_RING_LABEL_SOURCE = 'radius-rings-label-pts';
+let _radiusRingsVisible = false;
+
+/**
+ * Generate a GeoJSON Polygon approximating a circle on the Earth's surface.
+ * Uses spherical trigonometry for accurate projection at any latitude.
+ * @param {number} centerLng - Center longitude in degrees
+ * @param {number} centerLat - Center latitude in degrees
+ * @param {number} radiusKm  - Radius in kilometres
+ * @param {number} [numPoints=CIRCLE_SEGMENTS] - Number of polygon vertices
+ * @returns {Array<[number, number]>} Ring of [lng, lat] coordinates
+ */
+function createCircleCoords(centerLng, centerLat, radiusKm, numPoints = CIRCLE_SEGMENTS) {
+  if (isNaN(centerLng) || isNaN(centerLat) || isNaN(radiusKm) || radiusKm <= 0) {
+    return [];
+  }
+
+  const coords = [];
+  const distRadians = radiusKm / EARTH_RADIUS_KM;
+  const centerLatRad = centerLat * DEG_TO_RAD;
+  const centerLngRad = centerLng * DEG_TO_RAD;
+  const RAD_TO_DEG = 1 / DEG_TO_RAD;
+
+  for (let i = 0; i <= numPoints; i++) {
+    const angle = (i / numPoints) * 2 * Math.PI;
+    const lat = Math.asin(
+      Math.sin(centerLatRad) * Math.cos(distRadians) +
+      Math.cos(centerLatRad) * Math.sin(distRadians) * Math.cos(angle)
+    );
+    const lng = centerLngRad + Math.atan2(
+      Math.sin(angle) * Math.sin(distRadians) * Math.cos(centerLatRad),
+      Math.cos(distRadians) - Math.sin(centerLatRad) * Math.sin(lat)
+    );
+    coords.push([lng * RAD_TO_DEG, lat * RAD_TO_DEG]);
+  }
+  return coords;
+}
+
+/**
+ * Show concentric radius rings around a station on the map.
+ * Each band is a donut polygon (outer ring minus inner ring).
+ * @param {string} stationName
+ * @param {number} lat - Station latitude
+ * @param {number} lng - Station longitude
+ * @param {Object} analysis - Result from computeRadiusAnalysis()
+ */
+export function showRadiusRings(stationName, lat, lng, analysis) {
+  if (!_map || !analysis) return;
+
+  // Clean up any existing rings
+  hideRadiusRings();
+
+  const features = [];
+  const labelFeatures = [];
+  const { bands, rings } = analysis;
+
+  // Compute max density once, outside the loop (was recomputed every iteration)
+  const maxDensity = Math.max(
+    ...bands.filter(b => b.density != null).map(b => b.density),
+    1
+  );
+
+  // Build donut polygons for each band
+  let prevCoords = null;
+  for (let i = 0; i < rings.length; i++) {
+    const ring = rings[i];
+    const outerCoords = createCircleCoords(lng, lat, ring.radiusKm);
+    if (!outerCoords.length) continue;
+
+    // Donut: outer ring + inner ring (reversed) for polygon hole
+    const coordinates = prevCoords
+      ? [outerCoords, [...prevCoords].reverse()]
+      : [outerCoords];
+
+    const band = bands[i];
+    // Opacity scaled by density relative to peak (higher density = more opaque)
+    const opacity = band.density != null
+      ? Math.max(0.1, Math.min(0.5, (band.density / maxDensity) * 0.5))
+      : 0.1;
+
+    features.push({
+      type: 'Feature',
+      properties: {
+        color: ring.color,
+        opacity,
+        radiusKm: ring.radiusKm,
+        count: band.count,
+        density: band.density,
+        label: ring.label,
+      },
+      geometry: { type: 'Polygon', coordinates },
+    });
+
+    // Label point at the top of each ring (offset north by radius in degrees)
+    labelFeatures.push({
+      type: 'Feature',
+      properties: {
+        text: `${ring.radiusKm} km\n${ring.count} calls`,
+        color: ring.color,
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [lng, lat + (ring.radiusKm / KM_PER_DEG_LAT)],
+      },
+    });
+
+    prevCoords = outerCoords;
+  }
+
+  // Add source
+  _map.addSource(RADIUS_RING_SOURCE, {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features },
+  });
+
+  _map.addSource(RADIUS_RING_LABEL_SOURCE, {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: labelFeatures },
+  });
+
+  // Fill layer — colored bands with density-based opacity
+  _map.addLayer({
+    id: RADIUS_RING_FILL,
+    type: 'fill',
+    source: RADIUS_RING_SOURCE,
+    paint: {
+      'fill-color': ['get', 'color'],
+      'fill-opacity': ['get', 'opacity'],
+    },
+  }, 'fires-heat');
+
+  // Outline layer
+  _map.addLayer({
+    id: RADIUS_RING_OUTLINE,
+    type: 'line',
+    source: RADIUS_RING_SOURCE,
+    paint: {
+      'line-color': ['get', 'color'],
+      'line-width': 1.5,
+      'line-opacity': 0.8,
+      'line-dasharray': [4, 2],
+    },
+  }, 'fires-heat');
+
+  // Label layer
+  _map.addLayer({
+    id: RADIUS_RING_LABELS,
+    type: 'symbol',
+    source: RADIUS_RING_LABEL_SOURCE,
+    layout: {
+      'text-field': ['get', 'text'],
+      'text-size': 11,
+      'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
+      'text-anchor': 'bottom',
+      'text-allow-overlap': true,
+    },
+    paint: {
+      'text-color': ['get', 'color'],
+      'text-halo-color': '#0f1923',
+      'text-halo-width': 1.5,
+    },
+  });
+
+  _radiusRingsVisible = true;
+
+  // Fly to station at appropriate zoom
+  _map.flyTo({
+    center: [lng, lat],
+    zoom: 11.5,
+    duration: 1000,
+  });
+}
+
+/**
+ * Remove radius ring layers and source from the map.
+ */
+export function hideRadiusRings() {
+  if (!_map) return;
+
+  [RADIUS_RING_FILL, RADIUS_RING_OUTLINE, RADIUS_RING_LABELS].forEach(id => {
+    if (_map.getLayer(id)) _map.removeLayer(id);
+  });
+  [RADIUS_RING_SOURCE, RADIUS_RING_LABEL_SOURCE].forEach(id => {
+    if (_map.getSource(id)) _map.removeSource(id);
+  });
+
+  _radiusRingsVisible = false;
 }

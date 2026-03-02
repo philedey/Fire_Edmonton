@@ -1,5 +1,6 @@
 // Rankings tab — animated competitive leaderboard with podium, racing bars, FLIP table, playback
 // Supports YTD / MTD / Last 7 Days period selection via station_rankings() RPC
+// Per-type duration metrics for fair comparison across call volume
 
 import { fetchStationRankings, fetchStationComparison } from './api.js';
 import {
@@ -7,14 +8,17 @@ import {
 } from './chart-utils.js';
 
 // --- Metric definitions ---
-// Fields match the station_rankings() RPC output: total, structure_fires, outside_fires, alarms, median_duration
+// group: 'duration' or 'volume' — used to visually separate pills
 const METRICS = [
-  { key: 'duration', label: 'Median Duration', field: 'median_duration', unit: ' min', mode: 'lower', star: true },
-  { key: 'total', label: 'Total Calls', field: 'total', unit: '', mode: 'lower' },
-  { key: 'structure', label: 'Structure Fires', field: 'structure_fires', unit: '', mode: 'lower' },
-  { key: 'outside', label: 'Outside Fires', field: 'outside_fires', unit: '', mode: 'lower' },
-  { key: 'alarms', label: 'Alarms', field: 'alarms', unit: '', mode: 'lower' },
-  { key: 'alarmRatio', label: 'Alarm Ratio', compute: r => r.total > 0 ? +(r.alarms / r.total * 100).toFixed(1) : 0, unit: '%', mode: 'lower' },
+  { key: 'duration', label: 'All Types', field: 'median_duration', unit: ' min', mode: 'lower', star: true, group: 'duration' },
+  { key: 'durStructure', label: 'Structure', field: 'median_structure', unit: ' min', mode: 'lower', group: 'duration' },
+  { key: 'durOutside', label: 'Outside', field: 'median_outside', unit: ' min', mode: 'lower', group: 'duration' },
+  { key: 'durAlarm', label: 'Alarm', field: 'median_alarm', unit: ' min', mode: 'lower', group: 'duration' },
+  { key: 'total', label: 'Total Calls', field: 'total', unit: '', mode: 'lower', group: 'volume' },
+  { key: 'structure', label: 'Structure Fires', field: 'structure_fires', unit: '', mode: 'lower', group: 'volume' },
+  { key: 'outside', label: 'Outside Fires', field: 'outside_fires', unit: '', mode: 'lower', group: 'volume' },
+  { key: 'alarms', label: 'Alarms', field: 'alarms', unit: '', mode: 'lower', group: 'volume' },
+  { key: 'alarmRatio', label: 'Alarm Ratio', compute: r => r.total > 0 ? +(r.alarms / r.total * 100).toFixed(1) : 0, unit: '%', mode: 'lower', group: 'volume' },
 ];
 
 const TIER_COLORS = { top: '#4ecdc4', mid: '#ffaa00', bottom: '#ff4444' };
@@ -31,6 +35,7 @@ let playbackData = null;     // from fetchStationComparison (lazy-loaded)
 let activeMetric = 'duration';
 let activePeriod = 'ytd';
 let racingChart = null;
+let scatterChart = null;
 let playbackTimer = null;
 let oldRankMap = {};
 
@@ -78,15 +83,15 @@ function updateDateRange() {
   const latestDay = latest.getDate();
 
   if (activePeriod === 'ytd') {
-    el.textContent = `Jan 1 – ${MONTH_NAMES[month - 1]} ${latestDay}, ${year}`;
+    el.textContent = `Jan 1 \u2013 ${MONTH_NAMES[month - 1]} ${latestDay}, ${year}`;
   } else if (activePeriod === 'mtd') {
-    el.textContent = `${MONTH_NAMES[month - 1]} 1 – ${latestDay}, ${year}`;
+    el.textContent = `${MONTH_NAMES[month - 1]} 1 \u2013 ${latestDay}, ${year}`;
   } else {
     const weekStart = new Date(latest);
     weekStart.setDate(weekStart.getDate() - 6);
     const wsMonth = MONTH_NAMES[weekStart.getMonth()];
     const wsDay = weekStart.getDate();
-    el.textContent = `${wsMonth} ${wsDay} – ${MONTH_NAMES[month - 1]} ${latestDay}`;
+    el.textContent = `${wsMonth} ${wsDay} \u2013 ${MONTH_NAMES[month - 1]} ${latestDay}`;
   }
 }
 
@@ -111,6 +116,9 @@ function computeRankings(stations, metricKey) {
       outside_fires: parseInt(s.outside_fires) || 0,
       alarms: parseInt(s.alarms) || 0,
       median_duration: s.median_duration != null ? parseFloat(s.median_duration) : null,
+      median_structure: s.median_structure != null ? parseFloat(s.median_structure) : null,
+      median_outside: s.median_outside != null ? parseFloat(s.median_outside) : null,
+      median_alarm: s.median_alarm != null ? parseFloat(s.median_alarm) : null,
       avg_duration: s.avg_duration != null ? parseFloat(s.avg_duration) : null,
     };
     mapped.value = getStationValue(mapped, metricKey);
@@ -124,7 +132,7 @@ function computeRankings(stations, metricKey) {
     s.rank = i + 1;
     s.tier = i < 10 ? 'top' : i < 21 ? 'mid' : 'bottom';
     const oldRank = oldRankMap[s.name];
-    s.delta = oldRank != null ? oldRank - s.rank : 0; // positive = improved
+    s.delta = oldRank != null ? oldRank - s.rank : 0;
   });
 
   return ranked;
@@ -137,13 +145,25 @@ function renderAll(metricKey, animate = true) {
   const rankings = computeRankings(stations, metricKey);
   if (!rankings.length) return;
 
+  const m = METRICS.find(x => x.key === metricKey);
+  updatePodiumTitle(m);
   renderPodium(rankings.slice(0, 3), metricKey, animate);
+  renderScatterChart(stations, metricKey, animate);
   renderRacingChart(rankings, metricKey, animate);
   renderLeaderboard(rankings, metricKey, animate);
 
-  // Store current ranks for next delta calc
   oldRankMap = {};
   rankings.forEach(r => { oldRankMap[r.name] = r.rank; });
+}
+
+function updatePodiumTitle(metric) {
+  const h3 = document.querySelector('#card-rank-podium h3');
+  if (!h3) return;
+  if (metric.star) {
+    h3.textContent = 'Top 3 Stations';
+  } else {
+    h3.textContent = `Top 3 \u2014 ${metric.label}`;
+  }
 }
 
 // ===== PODIUM =====
@@ -153,28 +173,131 @@ function renderPodium(top3, metricKey, animate) {
   if (!container) return;
   const m = METRICS.find(x => x.key === metricKey);
 
-  // Podium order: 2nd | 1st | 3rd
   const order = [top3[1], top3[0], top3[2]].filter(Boolean);
   const heights = [140, 180, 110];
-  const podiumIdx = [1, 0, 2]; // maps to PODIUM_COLORS
+  const podiumIdx = [1, 0, 2];
 
   container.innerHTML = order.map((s, i) => {
     const pi = podiumIdx[i];
     const pc = PODIUM_COLORS[pi];
     const h = heights[i];
     const val = formatValue(s.value, m);
+    const calls = s.total.toLocaleString();
     const delay = animate ? `animation-delay: ${[150, 0, 300][i]}ms` : '';
     const animClass = animate ? 'podium-animate' : '';
 
     return `
       <div class="podium-col ${animClass}" style="${delay}">
         <div class="podium-station">Stn ${escapeHtml(s.name)}</div>
-        <div class="podium-value">${val}</div>
+        <div class="podium-value">${val} <span style="color:var(--text-muted);font-size:0.7rem">(${calls} calls)</span></div>
         <div class="podium-place" style="background:${pc.bg}; box-shadow: 0 0 20px ${pc.glow}; height:${h}px">
           <span class="podium-label">${pc.label}</span>
         </div>
       </div>`;
   }).join('');
+}
+
+// ===== EFFICIENCY SCATTER CHART =====
+
+function renderScatterChart(stations, metricKey, animate) {
+  const canvas = document.getElementById('chart-rank-scatter');
+  if (!canvas) return;
+  const m = METRICS.find(x => x.key === metricKey);
+
+  // Use the selected duration metric for Y, total calls for X
+  // If a volume metric is selected, default Y to median_duration
+  const yField = m.group === 'duration' ? m.field : 'median_duration';
+  const yLabel = m.group === 'duration' ? m.label : 'Median Duration';
+
+  const data = stations.map(s => {
+    const x = parseInt(s.total) || 0;
+    const y = s[yField] != null ? parseFloat(s[yField]) : null;
+    const r = Math.max(4, Math.sqrt(parseInt(s.structure_fires) || 0) * 3);
+    return { x, y, r, name: s.station_name, structure: parseInt(s.structure_fires) || 0 };
+  }).filter(d => d.y != null);
+
+  // Color by tier based on duration ranking
+  const sorted = [...data].sort((a, b) => a.y - b.y);
+  sorted.forEach((d, i) => {
+    d.tier = i < 10 ? 'top' : i < 21 ? 'mid' : 'bottom';
+  });
+
+  const chartData = {
+    datasets: [{
+      data: data.map(d => ({ x: d.x, y: d.y, r: d.r })),
+      backgroundColor: data.map(d => {
+        const t = sorted.find(s => s.name === d.name)?.tier || 'mid';
+        return TIER_COLORS[t] + 'AA';
+      }),
+      borderColor: data.map(d => {
+        const t = sorted.find(s => s.name === d.name)?.tier || 'mid';
+        return TIER_COLORS[t];
+      }),
+      borderWidth: 1.5,
+    }],
+  };
+
+  const options = {
+    ...CHART_DEFAULTS,
+    animation: { duration: animate ? 600 : 0 },
+    plugins: {
+      ...CHART_DEFAULTS.plugins,
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const d = data[ctx.dataIndex];
+            return `Stn ${d.name} \u2014 ${d.x} calls, ${d.y} min, ${d.structure} structure`;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'Total Calls', color: '#7a8a9a', font: { size: 11 } },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#7a8a9a', font: { size: 10 } },
+      },
+      y: {
+        title: { display: true, text: `${yLabel} (min)`, color: '#7a8a9a', font: { size: 11 } },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#7a8a9a', font: { size: 10 } },
+      },
+    },
+  };
+
+  // Update scatter title
+  const titleEl = document.getElementById('scatter-title');
+  if (titleEl) titleEl.textContent = `Efficiency: Calls vs ${yLabel}`;
+
+  if (scatterChart) {
+    scatterChart.data = chartData;
+    scatterChart.options.scales.y.title.text = `${yLabel} (min)`;
+    scatterChart.update(animate ? 'default' : 'none');
+    return;
+  }
+
+  scatterChart = new Chart(canvas, { type: 'bubble', data: chartData, options });
+
+  // Add station labels as a plugin
+  scatterChart.options.plugins.stationLabels = true;
+  const labelPlugin = {
+    id: 'stationLabels',
+    afterDraw(chart) {
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.font = '9px -apple-system, sans-serif';
+      ctx.fillStyle = '#7a8a9a';
+      ctx.textAlign = 'center';
+      const meta = chart.getDatasetMeta(0);
+      meta.data.forEach((point, i) => {
+        ctx.fillText(data[i].name, point.x, point.y - point.options.radius - 3);
+      });
+      ctx.restore();
+    },
+  };
+  Chart.register(labelPlugin);
+  scatterChart.update('none');
 }
 
 // ===== RACING BAR CHART =====
@@ -264,7 +387,7 @@ function renderLeaderboard(rankings, metricKey, animate) {
     });
   }
 
-  // Build rows
+  // Build rows — includes persistent calls column
   const rows = rankings.map(r => {
     const barPct = (r.value / maxVal) * 100;
 
@@ -276,14 +399,12 @@ function renderLeaderboard(rankings, metricKey, animate) {
 
     const badgeClass = r.rank <= 3 ? `lb-badge-${r.rank}` : '';
     const spark = sparkData[r.name] || '';
-    const nLabel = activePeriod === 'last7'
-      ? `<span class="lb-n" title="Incidents in period">n=${r.total}</span>`
-      : '';
 
     return `<div class="lb-row" data-station="${escapeHtml(r.name)}" data-value="${r.value}">
       <div class="lb-rank-badge ${badgeClass}">${r.rank}</div>
-      <div class="lb-name">Stn ${escapeHtml(r.name)}${nLabel}</div>
+      <div class="lb-name">Stn ${escapeHtml(r.name)}</div>
       <div class="lb-value">${formatValue(r.value, m)}</div>
+      <div class="lb-calls" title="Total calls">${r.total}</div>
       ${deltaHtml}
       <div class="lb-tier-bar-wrap">
         <div class="lb-tier-bar" style="width:${barPct.toFixed(1)}%;background:${TIER_COLORS[r.tier]}"></div>
@@ -309,12 +430,10 @@ function renderLeaderboard(rankings, metricKey, animate) {
 
       row.style.transform = `translateY(${deltaY}px)`;
       row.style.transition = 'none';
-      // Force reflow
       row.offsetHeight;
       row.style.transition = '';
       row.style.transform = '';
 
-      // Apply glow
       const prevRank = oldRankMap[stn];
       const newRank = rankings.find(r => r.name === stn)?.rank;
       if (prevRank != null && newRank != null) {
@@ -323,7 +442,6 @@ function renderLeaderboard(rankings, metricKey, animate) {
       }
     });
 
-    // Clean glow classes after animation
     setTimeout(() => {
       container.querySelectorAll('.lb-glow-up, .lb-glow-down').forEach(el => {
         el.classList.remove('lb-glow-up', 'lb-glow-down');
@@ -333,7 +451,6 @@ function renderLeaderboard(rankings, metricKey, animate) {
 }
 
 function buildSparkData(monthlyTrend, metricKey) {
-  // Group last 6 months of data per station, render inline SVG sparkline
   const m = METRICS.find(x => x.key === metricKey);
   const result = {};
   const byStation = {};
@@ -375,18 +492,29 @@ function buildSparkData(monthlyTrend, metricKey) {
   return result;
 }
 
-// ===== METRIC PILLS =====
+// ===== METRIC PILLS (grouped: Duration | Volume) =====
 
 function wireMetricPills() {
   const container = document.getElementById('rank-metrics');
   if (!container) return;
 
-  container.innerHTML = METRICS.map(m => {
+  let html = '';
+  let lastGroup = null;
+
+  for (const m of METRICS) {
+    // Insert separator between groups
+    if (lastGroup && m.group !== lastGroup) {
+      html += '<div class="metric-group-sep"></div>';
+    }
+    lastGroup = m.group;
+
     const active = m.key === activeMetric ? ' active' : '';
     const star = m.star ? ' key-metric' : '';
     const label = m.star ? `\u2605 ${m.label}` : m.label;
-    return `<button class="metric-pill${active}${star}" data-metric="${m.key}">${label}</button>`;
-  }).join('');
+    html += `<button class="metric-pill${active}${star}" data-metric="${m.key}">${label}</button>`;
+  }
+
+  container.innerHTML = html;
 
   container.addEventListener('click', (e) => {
     const btn = e.target.closest('.metric-pill');
@@ -416,7 +544,6 @@ function wirePlayback() {
       stopPlayback();
       return;
     }
-    // Lazy-load monthly trend data on first play
     if (!playbackData && !playbackLoading) {
       playbackLoading = true;
       const monthLabel = document.getElementById('rank-month-label');
@@ -482,7 +609,6 @@ function startPlayback() {
       setTimeout(() => monthLabel.classList.remove('playback-flash'), 300);
     }
 
-    // Build snapshot for this month
     const snapshot = buildMonthlySnapshot(year, month);
     if (snapshot.length) {
       const rankings = computeRankings(snapshot, activeMetric);
@@ -506,7 +632,6 @@ function stopPlayback() {
   const playBtn = document.getElementById('rank-play');
   if (playBtn) playBtn.textContent = '\u25B6';
 
-  // Restore current period view
   const monthLabel = document.getElementById('rank-month-label');
   if (monthLabel) monthLabel.textContent = activePeriod === 'ytd' ? 'YTD' : activePeriod === 'mtd' ? 'MTD' : '7D';
   renderAll(activeMetric, true);
@@ -514,10 +639,8 @@ function stopPlayback() {
 
 function buildMonthlySnapshot(year, month) {
   const monthly = playbackData?.monthlyTrend || [];
-  // Filter to rows up to this month for the given year (cumulative YTD)
   const filtered = monthly.filter(r => r.dispatch_year === year && r.dispatch_month <= month);
 
-  // Aggregate per station
   const byStation = {};
   for (const row of filtered) {
     const stn = row.station_name;

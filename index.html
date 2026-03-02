@@ -749,7 +749,7 @@
     <div class="tab-header">
       <div class="tab-header-left">
         <h2 class="section-title">Station Rankings</h2>
-        <p class="section-sub">Competitive leaderboard — median event duration is the key metric</p>
+        <p class="section-sub">Competitive leaderboard — rank by call type for fair comparison across volume</p>
       </div>
     </div>
 
@@ -777,6 +777,13 @@
     <div class="chart-card glass skeleton" id="card-rank-podium">
       <h3>Top 3 Stations</h3>
       <div id="rank-podium" class="podium-grid"></div>
+    </div>
+
+    <!-- Efficiency Scatter: Volume vs Duration -->
+    <div class="chart-card glass skeleton" id="card-rank-scatter">
+      <h3 id="scatter-title">Efficiency: Calls vs Duration</h3>
+      <p class="section-sub scatter-sub">Bottom-right = high volume &amp; fast (best). Bubble size = structure fires.</p>
+      <div class="chart-wrapper chart-wrapper-scatter"><canvas id="chart-rank-scatter"></canvas></div>
     </div>
 
     <!-- Racing Bar Chart + Leaderboard Grid -->

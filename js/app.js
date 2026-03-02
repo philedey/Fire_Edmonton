@@ -1,4 +1,4 @@
-import { fetchDashboardData, fetchMapPoints, fetchStationData, fetchStationList } from './api.js';
+import { fetchDashboardData, fetchMapPoints, fetchStationData, fetchStationList, fetchStationCoords } from './api.js';
 import { initMap, setMode, updateData } from './map.js';
 import { initCharts, updateCharts } from './charts.js';
 import { initFilters, populateYears, populateNeighbourhoods, populateStations, setMapGeojson, updateKPIs } from './filters.js';
@@ -13,12 +13,13 @@ import {
   setTimeFilter, animateTimeLapse, stopTimeLapse,
 } from './map-layers.js';
 import { initTabs } from './tabs.js';
-import { initStationCompare } from './station-compare.js';
-import { initOperations } from './operations.js';
-import { initTrends } from './trends.js';
+import { initStationCompare, setMapGeojsonForStations } from './station-compare.js';
+import { initOperations, setMapGeojsonForOps } from './operations.js';
+import { initTrends, setMapGeojsonForTrends } from './trends.js';
 import { initInsights } from './insights.js';
 import { initScorecard } from './scorecard.js';
 import { initRankings } from './rankings.js';
+import { setStationCoords } from './response-time.js';
 
 let mapGeojson = null;
 let currentYears = [];
@@ -103,6 +104,11 @@ async function main() {
       populateStations(names);
     }).catch(err => console.warn('Station list load failed:', err));
 
+    // Load station coordinates for response time estimation
+    fetchStationCoords().then(coords => {
+      setStationCoords(coords);
+    }).catch(err => console.warn('Station coords load failed:', err));
+
     fetchStationData().then(stationData => {
       currentStationData = stationData;
       updateStationCharts(stationData);
@@ -156,6 +162,9 @@ function applyMapData(geojson, stats, lastFetched) {
   mapGeojson = geojson;
   updateData(geojson);
   setMapGeojson(geojson);
+  setMapGeojsonForStations(geojson);
+  setMapGeojsonForOps(geojson);
+  setMapGeojsonForTrends(geojson);
 
   const dateStr = lastFetched
     ? ` | ${new Date(lastFetched).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}`

@@ -11,6 +11,7 @@
  */
 
 import { navigateToTab } from './tabs.js';
+import { getStationResource, getApparatusCount, getSpecialty, getStatusLabel, getStatusColor } from './station-resources.js';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -282,20 +283,38 @@ function createStationMarkers(stations) {
     const stationName = station.station_name || station.name || 'Station';
     const address = station.address || station.street_address || '';
 
+    // Lookup resource data for enriched popup
+    const resource = getStationResource(stationName);
+    const isActive = !resource || resource.status === 'active';
+    const statusLabel = resource ? getStatusLabel(resource.status) : '';
+    const statusColor = resource ? getStatusColor(resource.status) : '';
+    const specialty = resource ? getSpecialty(resource) : '';
+    const apparatusCount = resource ? getApparatusCount(resource) : 0;
+
     // Create custom SVG marker element
     const el = document.createElement('div');
     el.className = 'fire-station-marker';
     el.style.cssText = 'width:28px;height:28px;cursor:pointer;';
-    el.innerHTML = createStationSVG();
+    el.innerHTML = isActive ? createStationSVG() : createStationSVG('#7a8a9a');
     el.title = `Station ${stationName}`;
+    if (!isActive) el.style.opacity = '0.6';
 
-    // Build popup with "View Details" link
+    // Build enriched popup
+    let popupHtml = `<div class="popup-title">Station ${stationName}</div>`;
+    if (resource && resource.name) {
+      popupHtml += `<div class="popup-row" style="font-size:10px;color:#7a8a9a;margin-top:-2px">${resource.name}</div>`;
+    }
+    if (statusLabel && !isActive) {
+      popupHtml += `<div class="popup-row"><span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;background:${statusColor};color:#fff">${statusLabel}</span></div>`;
+    }
+    if (address) popupHtml += `<div class="popup-row"><span class="popup-label">Address:</span><span>${address}</span></div>`;
+    if (apparatusCount > 0) popupHtml += `<div class="popup-row"><span class="popup-label">Apparatus:</span><span>${apparatusCount} units</span></div>`;
+    if (resource && resource.total_min_staff) popupHtml += `<div class="popup-row"><span class="popup-label">Min Staff:</span><span>${resource.total_min_staff}</span></div>`;
+    if (specialty) popupHtml += `<div class="popup-row"><span class="popup-label">Specialty:</span><span>${specialty}</span></div>`;
+    popupHtml += `<div class="popup-row" style="margin-top:6px"><a href="#stations" class="station-link" data-station="${stationName}" style="color:var(--accent);font-size:11px;cursor:pointer">View Station Details &rarr;</a></div>`;
+
     const popupEl = new mapboxgl.Popup({ offset: 18, closeButton: true, closeOnClick: true })
-      .setHTML(
-        `<div class="popup-title">Station ${stationName}</div>` +
-        (address ? `<div class="popup-row"><span class="popup-label">Address:</span><span>${address}</span></div>` : '') +
-        `<div class="popup-row" style="margin-top:6px"><a href="#stations" class="station-link" data-station="${stationName}" style="color:var(--accent);font-size:11px;cursor:pointer">View Station Details &rarr;</a></div>`
-      );
+      .setHTML(popupHtml);
 
     popupEl.on('open', () => {
       setTimeout(() => {
@@ -325,14 +344,14 @@ function createStationMarkers(stations) {
  * Simple fire station SVG icon: a shield shape with a cross.
  * Matches the dark dashboard theme with a red accent.
  */
-function createStationSVG() {
+function createStationSVG(color = '#ff6b35') {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28">
     <!-- Shield background -->
     <path d="M14 2 L24 7 L24 16 Q24 24 14 27 Q4 24 4 16 L4 7 Z"
-          fill="#1a2a3a" stroke="#ff6b35" stroke-width="1.5"/>
+          fill="#1a2a3a" stroke="${color}" stroke-width="1.5"/>
     <!-- Cross -->
-    <rect x="12" y="8" width="4" height="13" rx="1" fill="#ff6b35"/>
-    <rect x="8" y="12" width="12" height="4" rx="1" fill="#ff6b35"/>
+    <rect x="12" y="8" width="4" height="13" rx="1" fill="${color}"/>
+    <rect x="8" y="12" width="12" height="4" rx="1" fill="${color}"/>
   </svg>`;
 }
 

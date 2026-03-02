@@ -5,12 +5,15 @@ import {
   CHART_DEFAULTS, CHART_COLORS,
   escapeHtml, formatNum, removeSkeleton, MONTH_LABELS,
 } from './chart-utils.js';
+import { EFRS_BENCHMARKS } from './efrs-benchmarks.js';
+import { getStationResource, getApparatusCount, getSpecialty } from './station-resources.js';
 
 let workloadChart = null;
 let alarmChart = null;
 let monthlyChart = null;
 let hourlyChart = null;
 let riskChart = null;
+let peerFundingChart = null;
 
 export async function initInsights(baselineStats, baselineExtraCharts, stationData, mapGeojson) {
   try {
@@ -40,6 +43,8 @@ export async function initInsights(baselineStats, baselineExtraCharts, stationDa
     renderHourlyChart(baselineExtraCharts);
     renderRiskChart(risk);
     renderRiskTable(risk);
+    renderPeerCityComparison();
+    renderPeerCityTable();
 
     removeSkeleton('insights');
   } catch (err) {
@@ -358,7 +363,7 @@ function renderWorkloadTable(workload) {
   if (!container) return;
 
   let html = `<table class="ops-table"><thead><tr>
-    <th>#</th><th>Station</th><th>Calls</th><th>% Median</th><th>Status</th><th>Med Dur</th>
+    <th>#</th><th>Station</th><th>Calls</th><th>% Median</th><th>Status</th><th>Med Dur</th><th>Specialty</th>
   </tr></thead><tbody>`;
 
   workload.stations.forEach((s, i) => {
@@ -367,6 +372,9 @@ function renderWorkloadTable(workload) {
       : s.status === 'Low' ? 'ins-under'
       : 'ins-balanced';
     const dur = s.avgDuration != null ? `${s.avgDuration.toFixed(1)}` : '--';
+    const res = getStationResource(s.name);
+    const specialty = getSpecialty(res);
+    const specialtyHtml = specialty ? `<span class="stn-specialty-badge">${specialty}</span>` : '';
 
     html += `<tr>
       <td>${i + 1}</td>
@@ -375,6 +383,7 @@ function renderWorkloadTable(workload) {
       <td>${s.pctOfMedian.toFixed(0)}%</td>
       <td><span class="ins-status ${statusCls}">${s.status}</span></td>
       <td>${dur}</td>
+      <td>${specialtyHtml}</td>
     </tr>`;
   });
 
@@ -665,4 +674,73 @@ function getRiskTier(score) {
   if (score >= 50) return 'Elevated';
   if (score >= 30) return 'Medium';
   return 'Low';
+}
+
+// --- KPMG Peer City Comparison ---
+
+function renderPeerCityComparison() {
+  const ctx = document.getElementById('chart-ins-peer-funding');
+  if (!ctx) return;
+
+  const comps = EFRS_BENCHMARKS.comparators;
+  const cities = Object.values(comps);
+  const labels = cities.map(c => c.label);
+  const values = cities.map(c => c.funding_per_event);
+  const colors = labels.map(l => l === 'Edmonton' ? '#ff6b35' : '#5a6a7a');
+
+  if (peerFundingChart) peerFundingChart.destroy();
+  peerFundingChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Funding per Event ($)',
+        data: values,
+        backgroundColor: colors,
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      plugins: {
+        ...CHART_DEFAULTS.plugins,
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (tooltipCtx) => `$${tooltipCtx.parsed.y.toLocaleString()} per event`,
+          },
+        },
+      },
+      scales: {
+        x: { ...CHART_DEFAULTS.scales.x },
+        y: { ...CHART_DEFAULTS.scales.y, beginAtZero: true, title: { display: true, text: '$ / Event', color: '#7a8a9a' } },
+      },
+    },
+  });
+}
+
+function renderPeerCityTable() {
+  const container = document.getElementById('ins-peer-table');
+  if (!container) return;
+
+  const comps = EFRS_BENCHMARKS.comparators;
+  const cities = Object.values(comps);
+
+  let html = `<table class="ops-table"><thead><tr>
+    <th>City</th><th>Firefighters</th><th>Stations</th><th>$/Event</th><th>Medical %</th>
+  </tr></thead><tbody>`;
+
+  for (const c of cities) {
+    const highlighted = c.label === 'Edmonton' ? ' style="color:var(--accent);font-weight:600"' : '';
+    html += `<tr${highlighted}>
+      <td>${c.label}</td>
+      <td>${c.firefighters.toLocaleString()}</td>
+      <td>${c.stations}</td>
+      <td>$${c.funding_per_event.toLocaleString()}</td>
+      <td>${(c.medical_pct * 100).toFixed(0)}%</td>
+    </tr>`;
+  }
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
 }

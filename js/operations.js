@@ -5,6 +5,8 @@ import {
   CHART_DEFAULTS, CHART_COLORS, DOUGHNUT_DEFAULTS, RESPONSE_CODE_LABELS, RESPONSE_CODE_COLORS,
   escapeHtml, formatNum, removeSkeleton, MONTH_LABELS,
 } from './chart-utils.js';
+import { EFRS_BENCHMARKS } from './efrs-benchmarks.js';
+import { computeAllStationResponseMetrics } from './response-time.js';
 
 let equipTypeChart = null;
 let avgUnitsChart = null;
@@ -12,6 +14,10 @@ let durationHistChart = null;
 let durationTrendChart = null;
 let responseCodeChart = null;
 let falseAlarmChart = null;
+let travelByStationChart = null;
+let _opsMapGeojson = null;
+
+export function setMapGeojsonForOps(geojson) { _opsMapGeojson = geojson; }
 
 export async function initOperations(availableYears) {
   populateOpsYear(availableYears);
@@ -55,6 +61,7 @@ async function loadOperationsData(year) {
     renderOutlierTable(opsData);
     renderResponseCodeChart(opsData);
     renderFalseAlarmChart(opsData);
+    renderTravelByStationChart();
     removeSkeleton('operations');
   } catch (err) {
     console.error('Operations data load failed:', err);
@@ -274,6 +281,8 @@ function renderDurationTrend(data) {
   const avgData = trend.map(r => parseFloat(r.avg_duration) || 0);
   const medianData = trend.map(r => parseFloat(r.median_duration) || 0);
 
+  const targetMin = EFRS_BENCHMARKS.response_time_target_minutes;
+
   if (durationTrendChart) durationTrendChart.destroy();
   durationTrendChart = new Chart(ctx, {
     type: 'line',
@@ -297,6 +306,15 @@ function renderDurationTrend(data) {
           tension: 0.4,
           pointRadius: 3,
           borderWidth: 2,
+          fill: false,
+        },
+        {
+          label: `EFRS Target (${targetMin} min)`,
+          data: Array(labels.length).fill(targetMin),
+          borderColor: '#a855f7',
+          borderDash: [6, 4],
+          pointRadius: 0,
+          borderWidth: 1.5,
           fill: false,
         },
       ],
@@ -422,4 +440,87 @@ function renderFalseAlarmChart(data) {
       },
     },
   });
+}
+
+// --- Estimated Travel Time by Station (from response-time.js) ---
+
+function renderTravelByStationChart() {
+  const ctx = document.getElementById('chart-ops-travel');
+  if (!ctx || !_opsMapGeojson) {
+    const section = document.getElementById('ops-response-time-section');
+    if (section) section.style.display = 'none';
+    return;
+  }
+
+  const allMetrics = computeAllStationResponseMetrics(_opsMapGeojson);
+  const entries = Object.entries(allMetrics)
+    .filter(([, m]) => m.count >= 5)
+    .sort((a, b) => a[1].medianTravelMin - b[1].medianTravelMin);
+
+  if (!entries.length) return;
+
+  const labels = entries.map(([stn]) => `Stn ${stn}`);
+  const values = entries.map(([, m]) => +m.medianTravelMin.toFixed(1));
+  const targetMin = EFRS_BENCHMARKS.response_time_target_minutes;
+
+  const colors = values.map(v =>
+    v <= 5 ? '#4ecdc4' : v <= 7 ? '#3b82f6' : v <= 10 ? '#ffcc00' : '#ff4444'
+  );
+
+  if (travelByStationChart) travelByStationChart.destroy();
+  travelByStationChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Median Est. Travel (min)',
+          data: values,
+          backgroundColor: colors,
+          borderRadius: 4,
+        },
+        {
+          label: `EFRS Target (${targetMin} min)`,
+          data: Array(labels.length).fill(targetMin),
+          type: 'line',
+          borderColor: '#a855f7',
+          borderDash: [6, 4],
+          pointRadius: 0,
+          borderWidth: 1.5,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      indexAxis: 'y',
+      plugins: {
+        ...CHART_DEFAULTS.plugins,
+        tooltip: {
+          callbacks: {
+            label: (tooltipCtx) => {
+              if (tooltipCtx.datasetIndex === 1) return `Target: ${targetMin} min`;
+              const stn = entries[tooltipCtx.dataIndex]?.[0];
+              const m = allMetrics[stn];
+              return m ? `${tooltipCtx.parsed.x} min (${m.count} incidents, ${m.pctWithin7.toFixed(0)}% within target)` : '';
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ...CHART_DEFAULTS.scales.x,
+          beginAtZero: true,
+          title: { display: true, text: 'Est. Travel Time (min)', color: '#7a8a9a' },
+        },
+        y: {
+          ...CHART_DEFAULTS.scales.y,
+          ticks: { ...CHART_DEFAULTS.scales.y.ticks, font: { size: 10 } },
+        },
+      },
+    },
+  });
+
+  const section = document.getElementById('ops-response-time-section');
+  if (section) section.style.display = '';
 }

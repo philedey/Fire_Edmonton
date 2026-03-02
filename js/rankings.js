@@ -6,6 +6,7 @@ import { fetchStationRankings, fetchStationComparison } from './api.js';
 import {
   CHART_DEFAULTS, CHART_COLORS, escapeHtml, formatNum, removeSkeleton,
 } from './chart-utils.js';
+import { getStationResource, getApparatusCount } from './station-resources.js';
 
 // --- Metric definitions ---
 // group: 'duration' or 'volume' — used to visually separate pills
@@ -19,6 +20,11 @@ const METRICS = [
   { key: 'outside', label: 'Outside Fires', field: 'outside_fires', unit: '', mode: 'lower', group: 'volume' },
   { key: 'alarms', label: 'Alarms', field: 'alarms', unit: '', mode: 'lower', group: 'volume' },
   { key: 'alarmRatio', label: 'Alarm Ratio', compute: r => r.total > 0 ? +(r.alarms / r.total * 100).toFixed(1) : 0, unit: '%', mode: 'lower', group: 'volume' },
+  { key: 'callsPerApparatus', label: 'Calls/Apparatus', compute: r => {
+    const res = getStationResource(r.name);
+    const app = res ? getApparatusCount(res) : null;
+    return app && app > 0 ? +(r.total / app).toFixed(0) : null;
+  }, unit: '', mode: 'lower', group: 'capacity' },
 ];
 
 const TIER_COLORS = { top: '#4ecdc4', mid: '#ffaa00', bottom: '#ff4444' };

@@ -202,6 +202,22 @@ export async function fetchStationList() {
   return rows.map(r => r.station_name);
 }
 
+// --- Station coordinates (for response time estimation) ---
+
+export async function fetchStationCoords() {
+  const rows = await supabaseRest('fire_stations', {
+    select: 'station_name,latitude,longitude',
+    order: 'station_name',
+  });
+  const coords = {};
+  for (const r of rows) {
+    if (r.latitude && r.longitude) {
+      coords[r.station_name] = { lat: parseFloat(r.latitude), lng: parseFloat(r.longitude) };
+    }
+  }
+  return coords;
+}
+
 // --- Station data (separate RPC — non-blocking) ---
 
 export async function fetchStationData() {

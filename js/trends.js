@@ -5,11 +5,24 @@ import {
   CHART_DEFAULTS, CHART_COLORS, escapeHtml, deltaBadge, formatNum,
   removeSkeleton, MONTH_LABELS,
 } from './chart-utils.js';
+import {
+  fetchDailyWeather, computeDailyFireCounts,
+  pearsonCorrelation, buildWeatherFireScatter,
+} from './weather.js';
 
 let ytdPaceChart = null;
 let seasonalChart = null;
 let outsideSeasonalChart = null;
 let growthChart = null;
+let weatherScatterChart = null;
+let weatherMonthlyChart = null;
+let _trendsMapGeojson = null;
+
+export function setMapGeojsonForTrends(geojson) {
+  _trendsMapGeojson = geojson;
+  // If trends tab already loaded, trigger weather rendering
+  if (geojson) loadWeatherCorrelation();
+}
 
 export async function initTrends(baselineStats, baselineExtraCharts) {
   try {
@@ -435,4 +448,203 @@ function renderGrowthTable(stats) {
 
   html += '</tbody></table>';
   container.innerHTML = html;
+}
+
+// --- Weather correlation ---
+
+async function loadWeatherCorrelation() {
+  if (!_trendsMapGeojson) return;
+
+  try {
+    const dailyWeather = await fetchDailyWeather(2011, 2025);
+    const dailyFires = computeDailyFireCounts(_trendsMapGeojson, 'outside');
+
+    const scatter = buildWeatherFireScatter(dailyWeather, dailyFires, 'maxTemp');
+    renderWeatherKPIs(scatter);
+    renderWeatherScatter(scatter);
+    renderWeatherMonthly(dailyWeather, dailyFires);
+  } catch (err) {
+    console.warn('Weather correlation load failed:', err);
+  }
+}
+
+function renderWeatherKPIs(scatter) {
+  const rEl = document.getElementById('weather-corr-r');
+  const rSub = document.getElementById('weather-corr-sub');
+  const nEl = document.getElementById('weather-corr-n');
+  const peakEl = document.getElementById('weather-peak-temp');
+  const peakSub = document.getElementById('weather-peak-sub');
+
+  if (rEl) {
+    const r = scatter.correlation.r;
+    rEl.textContent = r.toFixed(3);
+    if (rSub) {
+      const strength = Math.abs(r) > 0.5 ? 'Strong' : Math.abs(r) > 0.3 ? 'Moderate' : 'Weak';
+      const dir = r > 0 ? 'positive' : 'negative';
+      rSub.textContent = `${strength} ${dir} correlation`;
+    }
+  }
+
+  if (nEl) nEl.textContent = scatter.correlation.n.toLocaleString();
+
+  if (peakEl && scatter.points.length) {
+    const bins = {};
+    for (const p of scatter.points) {
+      const bin = Math.floor(p.x / 5) * 5;
+      const key = `${bin} to ${bin + 5}`;
+      bins[key] = (bins[key] || 0) + p.y;
+    }
+    const peak = Object.entries(bins).sort((a, b) => b[1] - a[1])[0];
+    if (peak) {
+      peakEl.textContent = `${peak[0]}°C`;
+      if (peakSub) peakSub.textContent = `${peak[1].toLocaleString()} outside fires in range`;
+    }
+  }
+
+  document.querySelectorAll('#weather-corr-r, #weather-corr-n, #weather-peak-temp')
+    .forEach(el => {
+      const card = el.closest('.kpi-card');
+      if (card) card.classList.remove('skeleton');
+    });
+}
+
+function renderWeatherScatter(scatter) {
+  const ctx = document.getElementById('chart-weather-scatter');
+  if (!ctx || !scatter.points.length) return;
+
+  const scatterData = scatter.points.map(p => ({ x: p.x, y: p.y }));
+  const trendData = scatter.trendLine;
+
+  if (weatherScatterChart) weatherScatterChart.destroy();
+  weatherScatterChart = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: 'Daily Observations',
+          data: scatterData,
+          backgroundColor: 'rgba(255, 153, 51, 0.3)',
+          borderColor: 'rgba(255, 153, 51, 0.6)',
+          pointRadius: 2,
+          pointHoverRadius: 5,
+        },
+        {
+          label: `Trend (r=${scatter.correlation.r.toFixed(2)})`,
+          data: trendData,
+          type: 'line',
+          borderColor: '#ff6b35',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      plugins: {
+        ...CHART_DEFAULTS.plugins,
+        tooltip: {
+          callbacks: {
+            label: (tooltipCtx) => {
+              const p = tooltipCtx.raw;
+              return `${p.x.toFixed(1)}°C — ${p.y} fires`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ...CHART_DEFAULTS.scales.x,
+          title: { display: true, text: 'Max Daily Temperature (°C)', color: '#7a8a9a' },
+        },
+        y: {
+          ...CHART_DEFAULTS.scales.y,
+          beginAtZero: true,
+          title: { display: true, text: 'Outside Fires', color: '#7a8a9a' },
+        },
+      },
+    },
+  });
+
+  ctx.closest('.chart-card')?.classList.remove('skeleton');
+}
+
+function renderWeatherMonthly(dailyWeather, dailyFires) {
+  const ctx = document.getElementById('chart-weather-monthly');
+  if (!ctx) return;
+
+  const monthTemp = Array(12).fill(null).map(() => []);
+  const monthFires = Array(12).fill(0);
+
+  for (const [day, weather] of Object.entries(dailyWeather)) {
+    const m = parseInt(day.substring(5, 7)) - 1;
+    if (m >= 0 && m < 12 && weather.avgTemp != null) {
+      monthTemp[m].push(weather.avgTemp);
+    }
+  }
+
+  for (const [day, count] of Object.entries(dailyFires)) {
+    const m = parseInt(day.substring(5, 7)) - 1;
+    if (m >= 0 && m < 12) monthFires[m] += count;
+  }
+
+  const avgTemps = monthTemp.map(arr =>
+    arr.length ? +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : null
+  );
+
+  if (weatherMonthlyChart) weatherMonthlyChart.destroy();
+  weatherMonthlyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: MONTH_LABELS,
+      datasets: [
+        {
+          label: 'Outside Fires',
+          data: monthFires,
+          backgroundColor: 'rgba(255, 153, 51, 0.6)',
+          borderColor: '#ff9933',
+          borderWidth: 1,
+          borderRadius: 3,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Avg Temperature (°C)',
+          data: avgTemps,
+          type: 'line',
+          borderColor: '#4ecdc4',
+          backgroundColor: 'rgba(78, 205, 196, 0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          borderWidth: 2,
+          yAxisID: 'y1',
+        },
+      ],
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      plugins: {
+        ...CHART_DEFAULTS.plugins,
+        tooltip: { mode: 'index', intersect: false },
+      },
+      scales: {
+        x: { ...CHART_DEFAULTS.scales.x },
+        y: {
+          ...CHART_DEFAULTS.scales.y,
+          beginAtZero: true,
+          position: 'left',
+          title: { display: true, text: 'Outside Fires', color: '#7a8a9a' },
+        },
+        y1: {
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { color: '#4ecdc4', font: { size: 10 } },
+          title: { display: true, text: 'Temperature (°C)', color: '#4ecdc4' },
+        },
+      },
+    },
+  });
+
+  ctx.closest('.chart-card')?.classList.remove('skeleton');
 }

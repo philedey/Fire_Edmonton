@@ -280,6 +280,18 @@
       </div>
     </div>
 
+    <!-- Station Profile Card -->
+    <div class="chart-card glass stn-profile-card" id="stn-profile-card" style="display:none">
+      <div class="stn-profile-header">
+        <div class="stn-profile-name"><span id="stn-profile-name">--</span><span class="stn-status-badge" id="stn-status-badge"></span></div>
+        <div class="stn-profile-meta" id="stn-profile-meta"></div>
+      </div>
+      <div class="stn-profile-body">
+        <div class="stn-apparatus-list" id="stn-apparatus-list"></div>
+        <div class="stn-profile-stats" id="stn-profile-stats"></div>
+      </div>
+    </div>
+
     <!-- Station KPI Row -->
     <div class="kpi-row kpi-row-6" id="station-kpi-row">
       <div class="kpi-card glass skeleton">
@@ -322,6 +334,21 @@
         <div class="kpi-label">Short Calls (&lt;5min)</div>
         <div class="kpi-sub" id="stn-kpi-short-sub">of total incidents</div>
       </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value" id="stn-kpi-calls-per-unit">--</div>
+        <div class="kpi-label">Calls / Apparatus</div>
+        <div class="kpi-sub" id="stn-kpi-calls-per-unit-sub">YTD volume per unit</div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value" id="stn-kpi-travel">--</div>
+        <div class="kpi-label">Est. Travel Time</div>
+        <div class="kpi-sub" id="stn-kpi-travel-sub" title="Estimates based on straight-line distance × 1.4 road factor at 50 km/h">median, estimated</div>
+      </div>
+      <div class="kpi-card glass skeleton">
+        <div class="kpi-value" id="stn-kpi-within7">--</div>
+        <div class="kpi-label">Within 7 Min</div>
+        <div class="kpi-sub" id="stn-kpi-within7-sub" title="EFRS response time target: 7 minutes (KPMG 2021)">of est. responses</div>
+      </div>
     </div>
 
     <!-- Station Charts -->
@@ -358,6 +385,11 @@
         <h3>Top Equipment Combinations</h3>
         <div class="table-wrapper" id="stn-equipment-combos"></div>
         <div id="stn-duration-compare" style="padding: 12px 16px 0;"></div>
+      </div>
+      <div class="chart-card glass skeleton" id="card-stn-travel">
+        <h3>Estimated Travel Time Distribution</h3>
+        <p class="chart-disclaimer">Estimates based on straight-line distance × 1.4 road factor at 50 km/h</p>
+        <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-stn-travel"></canvas></div>
       </div>
     </div>
 
@@ -489,6 +521,16 @@
       </div>
     </div>
 
+    <!-- Estimated Response Time Section -->
+    <div class="ops-section" id="ops-response-time-section">
+      <h3 class="ops-section-title">Estimated Travel Time by Station</h3>
+      <p class="section-sub" style="margin-top:-8px">Based on straight-line distance × 1.4 road factor at 50 km/h. Not actual response times.</p>
+      <div class="chart-card glass skeleton" id="card-ops-travel">
+        <h3>Median Est. Travel Time <span class="chart-subtitle">sorted by distance</span></h3>
+        <div class="chart-wrapper chart-wrapper-tall"><canvas id="chart-ops-travel"></canvas></div>
+      </div>
+    </div>
+
     <!-- Response Codes Section -->
     <div class="ops-section">
       <h3 class="ops-section-title">Response Outcome Codes</h3>
@@ -581,6 +623,39 @@
       <div class="chart-card glass skeleton">
         <h3>Growth Rate by Incident Type</h3>
         <div class="table-wrapper" id="growth-rate-table"></div>
+      </div>
+    </div>
+
+    <!-- Weather Correlation Section -->
+    <div class="ops-section">
+      <h3 class="ops-section-title">Weather Correlation</h3>
+      <div class="kpi-row" style="margin-bottom:16px">
+        <div class="kpi-card glass skeleton" style="flex:1">
+          <div class="kpi-label">Temp–Fire Correlation (r)</div>
+          <div class="kpi-value" id="weather-corr-r">--</div>
+          <div class="kpi-sub" id="weather-corr-sub"></div>
+        </div>
+        <div class="kpi-card glass skeleton" style="flex:1">
+          <div class="kpi-label">Data Points</div>
+          <div class="kpi-value" id="weather-corr-n">--</div>
+          <div class="kpi-sub">Days with outside fires + weather data</div>
+        </div>
+        <div class="kpi-card glass skeleton" style="flex:1">
+          <div class="kpi-label">Peak Fire Temp Range</div>
+          <div class="kpi-value" id="weather-peak-temp">--</div>
+          <div class="kpi-sub" id="weather-peak-sub"></div>
+        </div>
+      </div>
+      <div class="ops-grid-2">
+        <div class="chart-card glass skeleton">
+          <h3>Max Daily Temperature vs Outside Fires</h3>
+          <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-weather-scatter"></canvas></div>
+          <p class="chart-disclaimer">Weather data from Environment Canada via Edmonton Open Data Portal (Blatchford station)</p>
+        </div>
+        <div class="chart-card glass skeleton">
+          <h3>Monthly Avg Temperature vs Outside Fire Count</h3>
+          <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-weather-monthly"></canvas></div>
+        </div>
       </div>
     </div>
   </div>
@@ -686,6 +761,21 @@
         <div class="chart-card glass skeleton" id="card-ins-risk-table">
           <h3>Risk Assessment Detail</h3>
           <div class="table-wrapper table-wrapper-tall" id="ins-risk-table"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPMG Peer City Comparison -->
+    <div class="ops-section">
+      <h3 class="ops-section-title">KPMG Peer City Comparison <span class="chart-subtitle" style="font-weight:400;font-size:0.75rem;color:var(--text-muted)">Source: KPMG Review of EFRS, 2021 (2019 data)</span></h3>
+      <div class="ops-grid-2">
+        <div class="chart-card glass" id="card-ins-peer-funding">
+          <h3>Funding per Event</h3>
+          <div class="chart-wrapper chart-wrapper-md"><canvas id="chart-ins-peer-funding"></canvas></div>
+        </div>
+        <div class="chart-card glass" id="card-ins-peer-staff">
+          <h3>Firefighters &amp; Stations</h3>
+          <div class="table-wrapper" id="ins-peer-table"></div>
         </div>
       </div>
     </div>

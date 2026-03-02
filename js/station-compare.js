@@ -8,6 +8,9 @@ import {
 import {
   streamAnalysis, buildStationPrompt, getStationSystemPrompt,
 } from './ai.js';
+import { getStationResource, getApparatusCount, getSpecialty, getStatusLabel, getStatusColor } from './station-resources.js';
+import { computeStationResponseMetrics, setStationCoords } from './response-time.js';
+import { EFRS_BENCHMARKS } from './efrs-benchmarks.js';
 
 let trendChart = null;
 let typeMixChart = null;
@@ -15,9 +18,14 @@ let equipmentChart = null;
 let responseChart = null;
 let yoyChart = null;
 let durationHistChart = null;
+let travelChart = null;
 let currentStation = '04';
 let currentStationData = null;
 let currentEquipData = null;
+let _mapGeojson = null;
+
+// Allow app.js to pass in map geojson for response time calculations
+export function setMapGeojsonForStations(geojson) { _mapGeojson = geojson; }
 
 export async function initStationCompare() {
   await populateStationDropdown();
@@ -76,6 +84,10 @@ async function loadStation(station) {
     renderStationDurationHist(durData);
     renderDurationComparison(data);
     renderEquipmentCombosTable(equipData);
+    renderStationProfile(station, data);
+    renderCapacityKPIs(station, data);
+    renderResponseTimeKPIs(station);
+    renderTravelTimeChart(station);
     updateStationAIPanel(station);
 
     removeSkeleton('stations');
@@ -545,6 +557,164 @@ function renderAllStationsTable(data, selectedStation) {
 
   html += '</tbody></table>';
   container.innerHTML = html;
+}
+
+// --- Station Profile Card ---
+
+function renderStationProfile(station, data) {
+  const card = document.getElementById('stn-profile-card');
+  if (!card) return;
+
+  const res = getStationResource(station);
+  if (!res) { card.style.display = 'none'; return; }
+
+  card.style.display = '';
+
+  // Name + status badge
+  const nameEl = document.getElementById('stn-profile-name');
+  const badgeEl = document.getElementById('stn-status-badge');
+  nameEl.textContent = `Station ${station} — ${res.name}`;
+
+  const statusLabel = getStatusLabel(res.status);
+  const statusCls = res.status === 'active' ? 'stn-status-active'
+    : res.status === 'closed_renovation' ? 'stn-status-closed' : 'stn-status-construction';
+  badgeEl.textContent = statusLabel;
+  badgeEl.className = `stn-status-badge ${statusCls}`;
+
+  const specialty = getSpecialty(res);
+
+  // Meta line: district + address + specialty
+  const metaEl = document.getElementById('stn-profile-meta');
+  let metaHtml = `${res.district} District | ${res.address}`;
+  if (specialty) metaHtml += ` | <span class="stn-specialty-badge">${specialty}</span>`;
+  metaEl.innerHTML = metaHtml;
+
+  // Apparatus tags
+  const apparatusEl = document.getElementById('stn-apparatus-list');
+  const tags = [];
+  for (const p of res.pump_companies) tags.push(`<span class="stn-apparatus-tag tag-pump">${escapeHtml(p)}</span>`);
+  for (const l of res.ladder_companies) tags.push(`<span class="stn-apparatus-tag tag-ladder">${escapeHtml(l)}</span>`);
+  for (const r of res.rescue_companies) tags.push(`<span class="stn-apparatus-tag tag-rescue">${escapeHtml(r)}</span>`);
+  for (const s of res.special_units) tags.push(`<span class="stn-apparatus-tag tag-special">${escapeHtml(s)}</span>`);
+  for (const c of res.chief_units) tags.push(`<span class="stn-apparatus-tag tag-chief">${escapeHtml(c)}</span>`);
+
+  if (!tags.length) tags.push('<span class="stn-apparatus-tag" style="font-style:italic">No apparatus assigned</span>');
+  apparatusEl.innerHTML = tags.join('');
+
+  // Stats column
+  const statsEl = document.getElementById('stn-profile-stats');
+  const apparatusCount = getApparatusCount(res);
+  const notes = res.notes || '';
+  statsEl.innerHTML = `
+    <div class="stn-profile-stat"><span class="stn-profile-stat-label">Apparatus</span><span class="stn-profile-stat-value">${apparatusCount} units</span></div>
+    <div class="stn-profile-stat"><span class="stn-profile-stat-label">Min Crew</span><span class="stn-profile-stat-value">${res.min_crew_size} per unit</span></div>
+    <div class="stn-profile-stat"><span class="stn-profile-stat-label">Total Staff</span><span class="stn-profile-stat-value">${res.total_min_staff} per shift</span></div>
+    <div class="stn-profile-stat"><span class="stn-profile-stat-label">EMS Co-response</span><span class="stn-profile-stat-value">${res.has_ems ? 'Yes' : 'No'}</span></div>
+    ${notes ? `<div class="stn-profile-stat" style="border:none"><span class="stn-profile-stat-label" style="font-style:italic;color:var(--text-muted)">${escapeHtml(notes)}</span></div>` : ''}
+  `;
+}
+
+// --- Capacity KPIs ---
+
+function renderCapacityKPIs(station, data) {
+  const res = getStationResource(station);
+  const apparatusCount = res ? getApparatusCount(res) : 0;
+
+  const kpisArray = data.stationKpis || [];
+  const currentYear = data.currentYear || new Date().getFullYear();
+  const curr = kpisArray.find(r => r.dispatch_year === currentYear) || {};
+  const total = parseInt(curr.total) || 0;
+
+  // Calls per apparatus
+  const cpuEl = document.getElementById('stn-kpi-calls-per-unit');
+  const cpuSub = document.getElementById('stn-kpi-calls-per-unit-sub');
+  if (cpuEl) {
+    if (apparatusCount > 0) {
+      cpuEl.textContent = Math.round(total / apparatusCount).toLocaleString();
+      if (cpuSub) cpuSub.textContent = `${total.toLocaleString()} calls / ${apparatusCount} units`;
+    } else {
+      cpuEl.textContent = '--';
+      if (cpuSub) cpuSub.textContent = 'no apparatus assigned';
+    }
+  }
+}
+
+// --- Response Time KPIs ---
+
+function renderResponseTimeKPIs(station) {
+  const travelEl = document.getElementById('stn-kpi-travel');
+  const travelSub = document.getElementById('stn-kpi-travel-sub');
+  const within7El = document.getElementById('stn-kpi-within7');
+  const within7Sub = document.getElementById('stn-kpi-within7-sub');
+
+  if (!_mapGeojson) {
+    if (travelEl) travelEl.textContent = '--';
+    if (within7El) within7El.textContent = '--';
+    if (travelSub) travelSub.textContent = 'map data loading...';
+    return;
+  }
+
+  const metrics = computeStationResponseMetrics(station, _mapGeojson);
+  if (!metrics) {
+    if (travelEl) travelEl.textContent = '--';
+    if (within7El) within7El.textContent = '--';
+    return;
+  }
+
+  if (travelEl) travelEl.textContent = `${metrics.medianTravelMin.toFixed(1)} min`;
+  if (travelSub) travelSub.textContent = `avg ${metrics.avgTravelMin.toFixed(1)} min (${metrics.count} incidents)`;
+
+  if (within7El) within7El.textContent = `${metrics.pctWithin7.toFixed(0)}%`;
+  if (within7Sub) {
+    const target = EFRS_BENCHMARKS.response_time_target_minutes;
+    within7Sub.textContent = `vs ${target} min EFRS target`;
+  }
+}
+
+// --- Travel Time Distribution Chart ---
+
+function renderTravelTimeChart(station) {
+  const ctx = document.getElementById('chart-stn-travel');
+  if (!ctx) return;
+
+  if (!_mapGeojson) return;
+
+  const metrics = computeStationResponseMetrics(station, _mapGeojson);
+  if (!metrics) {
+    const card = document.getElementById('card-stn-travel');
+    if (card) card.style.display = 'none';
+    return;
+  }
+
+  const card = document.getElementById('card-stn-travel');
+  if (card) card.style.display = '';
+
+  const order = ['0-3', '3-5', '5-7', '7-10', '10-15', '15+'];
+  const labels = order.map(b => b + ' min');
+  const values = order.map(b => metrics.distribution[b] || 0);
+  const colors = ['#4ecdc4', '#3b82f6', '#10b981', '#ffcc00', '#ff9933', '#ff4444'];
+
+  if (travelChart) travelChart.destroy();
+  travelChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Incidents',
+        data: values,
+        backgroundColor: colors,
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } },
+      scales: {
+        x: { ...CHART_DEFAULTS.scales.x },
+        y: { ...CHART_DEFAULTS.scales.y, beginAtZero: true },
+      },
+    },
+  });
 }
 
 // --- AI Station Analysis ---

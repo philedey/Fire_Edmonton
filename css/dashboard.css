@@ -1609,6 +1609,46 @@ body {
 }
 
 /* ========================================================================== */
+/* STATION PROFILE CARD                                                       */
+/* ========================================================================== */
+
+.stn-profile-card { padding: 16px 20px; margin-bottom: 16px; }
+.stn-profile-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.stn-profile-name { font-size: 1.1rem; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 10px; }
+.stn-status-badge {
+  font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.stn-status-active { background: rgba(78,205,196,0.15); color: #4ecdc4; }
+.stn-status-closed { background: rgba(255,153,51,0.15); color: #ff9933; }
+.stn-status-construction { background: rgba(255,204,0,0.15); color: #ffcc00; }
+.stn-profile-meta { font-size: 0.8rem; color: var(--text-muted); }
+.stn-profile-body { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.stn-apparatus-list { display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; }
+.stn-apparatus-tag {
+  font-size: 0.72rem; padding: 3px 8px; border-radius: 6px;
+  background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid var(--border);
+}
+.stn-apparatus-tag.tag-pump { border-color: #ff4444; color: #ff6666; }
+.stn-apparatus-tag.tag-ladder { border-color: #ff9933; color: #ffbb66; }
+.stn-apparatus-tag.tag-rescue { border-color: #4ecdc4; color: #6eded6; }
+.stn-apparatus-tag.tag-special { border-color: #a855f7; color: #c084fc; }
+.stn-apparatus-tag.tag-chief { border-color: #3b82f6; color: #60a5fa; }
+.stn-profile-stats { display: flex; flex-direction: column; gap: 6px; }
+.stn-profile-stat { display: flex; justify-content: space-between; font-size: 0.8rem; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.stn-profile-stat-label { color: var(--text-muted); }
+.stn-profile-stat-value { color: var(--text); font-weight: 500; }
+.stn-specialty-badge {
+  font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+  background: rgba(168,85,247,0.15); color: #c084fc; text-transform: uppercase;
+}
+.chart-disclaimer { font-size: 0.7rem; color: var(--text-muted); margin: -4px 0 8px; font-style: italic; }
+
+@media (max-width: 700px) {
+  .stn-profile-body { grid-template-columns: 1fr; }
+}
+
+/* ========================================================================== */
 /* RANKINGS TAB                                                               */
 /* ========================================================================== */
 
